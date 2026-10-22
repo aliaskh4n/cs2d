@@ -7,7 +7,7 @@ annotations. Nothing is uploaded; the demo is parsed in the browser via WASM.
 ## Data flow
 
 ```
-router.ts
+app/router.ts          `/` landing (first visit only) · `/app/*` is the analyzer
   └─ DemoAnalyzerView.vue        route entry: file picker, recent demos, tabs
        │
        ├─ ingest/                bytes ──► Replay

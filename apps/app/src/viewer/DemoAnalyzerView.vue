@@ -3,6 +3,7 @@ import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } fr
 import { useRoute, useRouter } from 'vue-router'
 import { useMediaQuery } from '@vueuse/core'
 import UiIcon from '@/ui/UiIcon.vue'
+import { UPLOAD_PATH, demoPath } from '@/app/paths'
 // The stage, the analysis tabs and the ambient preview are only needed once a
 // demo is open (or, for the preview, on desktop). Load them lazily so the idle
 // landing chunk stays small: the dropzone hero is all the first paint needs.
@@ -75,7 +76,7 @@ const autoplay = computed(() => {
   return q === '1' || q === 'true'
 })
 type Tab = 'viewer' | 'heatmap' | 'utilities' | 'economy' | 'duels'
-// The active tab is driven by the URL: `/:id` is the 2D stage, `/:id/heatmaps`
+// The active tab is driven by the URL: `/app/:id` is the 2D stage, `/app/:id/heatmaps`
 // the heatmap, `/:id/utilities` the utilities page, `/:id/economy` the economy
 // page, `/:id/duels` the duels page.
 const activeTab = computed<Tab>(() => {
@@ -112,11 +113,11 @@ function goTab(tab: Tab) {
     const { h: _h, u: _u, d: _d, ...rest } = route.query
     const query = { ...rest, tab: TAB_QUERY[tab] }
     if (!query.tab) delete query.tab
-    router.push({ path: '/', query })
+    router.push({ path: UPLOAD_PATH, query })
     return
   }
   const id = currentId.value
-  if (id) router.push(`/${id}${TAB_SEGMENT[tab]}`)
+  if (id) router.push(`${demoPath(id)}${TAB_SEGMENT[tab]}`)
 }
 
 // The heatmap's own pages (presence/grenades), each a separate URL: history demos
@@ -133,11 +134,11 @@ function goHeatmapSource(src: HeatmapSource) {
   if (currentSrc.value) {
     const query = { ...route.query, tab: 'heatmaps', h: src === 'presence' ? undefined : src }
     if (!query.h) delete query.h
-    router.push({ path: '/', query })
+    router.push({ path: UPLOAD_PATH, query })
     return
   }
   const id = currentId.value
-  if (id) router.push(`/${id}/heatmaps${src === 'presence' ? '' : `/${src}`}`)
+  if (id) router.push(`${demoPath(id)}/heatmaps${src === 'presence' ? '' : `/${src}`}`)
 }
 
 // The utilities tab's own pages (throws/flashes/damage), each a separate URL:
@@ -153,11 +154,11 @@ function goUtilitySub(sub: UtilitySub) {
   if (currentSrc.value) {
     const query = { ...route.query, tab: 'utilities', u: sub === 'throws' ? undefined : sub }
     if (!query.u) delete query.u
-    router.push({ path: '/', query })
+    router.push({ path: UPLOAD_PATH, query })
     return
   }
   const id = currentId.value
-  if (id) router.push(`/${id}/utilities${sub === 'throws' ? '' : `/${sub}`}`)
+  if (id) router.push(`${demoPath(id)}/utilities${sub === 'throws' ? '' : `/${sub}`}`)
 }
 
 // The duels tab's own pages (kills/deaths/stats/opening-map), each a separate URL:
@@ -173,11 +174,11 @@ function goDuelSub(sub: DuelSub) {
   if (currentSrc.value) {
     const query = { ...route.query, tab: 'duels', d: sub === 'kills' ? undefined : sub }
     if (!query.d) delete query.d
-    router.push({ path: '/', query })
+    router.push({ path: UPLOAD_PATH, query })
     return
   }
   const id = currentId.value
-  if (id) router.push(`/${id}/duels${sub === 'kills' ? '' : `/${sub}`}`)
+  if (id) router.push(`${demoPath(id)}/duels${sub === 'kills' ? '' : `/${sub}`}`)
 }
 
 // Legacy links: kills/deaths moved from the heatmap tab to Duels, and the duel
@@ -191,23 +192,23 @@ watch(
     const sub = seg1(route.params.sub)
     const id = seg1(route.params.id)
     if (tabSeg === 'heatmaps' && (sub === 'kills' || sub === 'deaths')) {
-      if (id) void router.replace(`/${id}/duels/${sub}`)
+      if (id) void router.replace(`${demoPath(id)}/duels/${sub}`)
       return
     }
     if (tabSeg === 'duels' && (sub === 'matrix' || sub === 'opening')) {
-      if (id) void router.replace(`/${id}/duels/stats`)
+      if (id) void router.replace(`${demoPath(id)}/duels/stats`)
       return
     }
     const qTab = seg1(route.query.tab)
     const h = seg1(route.query.h)
     if (qTab === 'heatmaps' && (h === 'kills' || h === 'deaths')) {
       const { h: _h, ...rest } = route.query
-      void router.replace({ path: '/', query: { ...rest, tab: 'duels', d: h } })
+      void router.replace({ path: UPLOAD_PATH, query: { ...rest, tab: 'duels', d: h } })
       return
     }
     const d = seg1(route.query.d)
     if (qTab === 'duels' && (d === 'matrix' || d === 'opening')) {
-      void router.replace({ path: '/', query: { ...route.query, tab: 'duels', d: 'stats' } })
+      void router.replace({ path: UPLOAD_PATH, query: { ...route.query, tab: 'duels', d: 'stats' } })
     }
   },
   { immediate: true },
@@ -286,7 +287,7 @@ async function handleFile(file: File) {
     })
     if (id) {
       currentId.value = id // already loaded: keeps the watcher from reloading
-      router.push(`/${id}`)
+      router.push(demoPath(id))
     }
   }
 }
@@ -314,7 +315,7 @@ async function onImportArchive(file: File) {
       fileSize: file.size,
     })
     currentId.value = id
-    router.push(`/${id}`)
+    router.push(demoPath(id))
   } catch (err) {
     importError.value = err instanceof Error ? err.message : String(err)
   } finally {
@@ -331,7 +332,7 @@ async function loadById(id: string) {
     if (!payload) {
       // Not present in this browser (cleared storage / link from another machine).
       currentId.value = null
-      router.replace('/')
+      router.replace(UPLOAD_PATH)
       return
     }
     const meta = recent.list.value.find((d) => d.id === id)
@@ -363,7 +364,7 @@ async function loadExternal(ref: string, label: string) {
     currentSrc.value = ref
   } catch {
     currentSrc.value = null
-    router.replace('/')
+    router.replace(UPLOAD_PATH)
   } finally {
     routeLoading.value = false
   }
