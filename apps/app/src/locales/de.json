@@ -267,7 +267,10 @@
     "allPlayers": "Alle Spieler",
     "empty": "Keine Granaten für die aktuellen Filter.",
     "unknown": "Unbekannt",
-    "hint": "Fahre mit der Maus über eine Granate, um ihre Flugbahn zu isolieren · klicke, um sie im Replay zu öffnen"
+    "hint": "Fahre mit der Maus über eine Granate, um ihre Flugbahn zu isolieren · klicke, um sie im Replay zu öffnen",
+    "copyThrow": "setpos kopieren",
+    "copied": "Kopiert",
+    "copyFallback": "Diesen Befehl kopieren:"
   },
   "utilities": {
     "tabs": {

@@ -267,7 +267,10 @@
     "allPlayers": "Tüm oyuncular",
     "empty": "Geçerli filtreler için granat yok.",
     "unknown": "Bilinmiyor",
-    "hint": "Bir granadın üzerine gelin, yörüngesini yalıtın · replay'de açmak için tıklayın"
+    "hint": "Bir granadın üzerine gelin, yörüngesini yalıtın · replay'de açmak için tıklayın",
+    "copyThrow": "setpos kopyala",
+    "copied": "Kopyalandı",
+    "copyFallback": "Bu komutu kopyalayın:"
   },
   "utilities": {
     "tabs": {

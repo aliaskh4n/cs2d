@@ -267,7 +267,10 @@
     "allPlayers": "All players",
     "empty": "No grenades for the current filters.",
     "unknown": "Unknown",
-    "hint": "Hover a grenade to isolate its trajectory · click to open it in the replay"
+    "hint": "Hover a grenade to isolate its trajectory · click to open it in the replay",
+    "copyThrow": "Copy setpos",
+    "copied": "Copied",
+    "copyFallback": "Copy this command:"
   },
   "utilities": {
     "tabs": {

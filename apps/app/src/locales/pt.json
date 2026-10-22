@@ -267,7 +267,10 @@
     "allPlayers": "Todos os jogadores",
     "empty": "Nenhuma granada para os filtros atuais.",
     "unknown": "Desconhecido",
-    "hint": "Passe o mouse sobre uma granada para isolar a trajetória · clique para abrir no replay"
+    "hint": "Passe o mouse sobre uma granada para isolar a trajetória · clique para abrir no replay",
+    "copyThrow": "Copiar setpos",
+    "copied": "Copiado",
+    "copyFallback": "Copie este comando:"
   },
   "utilities": {
     "tabs": {

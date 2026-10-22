@@ -267,7 +267,10 @@
     "allPlayers": "Tous les joueurs",
     "empty": "Aucune grenade pour les filtres actuels.",
     "unknown": "Inconnu",
-    "hint": "Survolez une grenade pour isoler sa trajectoire · cliquez pour l'ouvrir dans le replay"
+    "hint": "Survolez une grenade pour isoler sa trajectoire · cliquez pour l'ouvrir dans le replay",
+    "copyThrow": "Copier setpos",
+    "copied": "Copié",
+    "copyFallback": "Copiez cette commande :"
   },
   "utilities": {
     "tabs": {

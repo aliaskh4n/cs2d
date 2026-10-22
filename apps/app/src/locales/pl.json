@@ -267,7 +267,10 @@
     "allPlayers": "Wszyscy gracze",
     "empty": "Brak granatów dla bieżących filtrów.",
     "unknown": "Nieznany",
-    "hint": "Najedź na granat, aby wyizolować jego tor · kliknij, aby otworzyć go w powtórce"
+    "hint": "Najedź na granat, aby wyizolować jego tor · kliknij, aby otworzyć go w powtórce",
+    "copyThrow": "Kopiuj setpos",
+    "copied": "Skopiowano",
+    "copyFallback": "Skopiuj to polecenie:"
   },
   "utilities": {
     "tabs": {
