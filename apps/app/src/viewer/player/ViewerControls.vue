@@ -425,6 +425,7 @@ onMounted(() => centerCurrent('auto'))
         @mouseleave="volHover = false"
       >
         <button
+          :aria-label="muted ? t('viewer.enableComms') : t('viewer.muteComms')"
           v-tooltip="
             voiceLoading && !muted
               ? t('viewer.loadingComms')
@@ -432,7 +433,7 @@ onMounted(() => centerCurrent('auto'))
                 ? t('viewer.enableComms')
                 : t('viewer.muteComms')
           "
-          class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition-colors duration-150 hover:bg-white/10"
+          class="flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-full px-2.5 transition-colors duration-150 hover:bg-white/10"
           :class="muted ? 'text-ink-500 hover:text-white' : 'text-ink-200 hover:text-white'"
           @click="emit('toggleMute')"
         >
@@ -442,6 +443,7 @@ onMounted(() => centerCurrent('auto'))
             class="h-4 w-4 animate-spin"
           />
           <UiIcon v-else :name="muted ? 'volume-x' : 'volume-2'" class="h-4 w-4" />
+          <span class="text-[10px]">{{ t('cloud.voiceLabel') }}</span>
         </button>
 
         <!-- Hover panel: volume (left) and CT/T balance (right). The outer pb-2

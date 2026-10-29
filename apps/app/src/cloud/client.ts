@@ -8,7 +8,7 @@ export const signedIn = computed(() => !!token.value)
 export const cloudBusy = ref(false)
 export const cloudProgress = ref(0)
 export const cloudError = ref('')
-export const keepCloudVoice = ref(false)
+export const keepCloudVoice = ref(localStorage.getItem('cs2d-keep-voice') !== 'off')
 export function setCloudSession(value: string) {
   token.value = value
   if (value) sessionStorage.setItem(TOKEN_KEY, value)

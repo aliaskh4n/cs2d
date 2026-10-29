@@ -3,7 +3,7 @@ import { defineContentScript } from '#imports'
 import type { BlobReply } from '../utils/protocol'
 const EXT = 'cs2dv-extension'
 const APP = 'cs2dv-app'
-const COMMANDS = new Set(['PING','CLOUD_CONFIG','SOURCES_STATE','FACEIT_SYNC','STEAM_SYNC','STEAM_AUTO_IMPORT','IMPORT_MATCH'])
+const COMMANDS = new Set(['PING','CLOUD_CONFIG','SOURCES_STATE','FACEIT_SYNC','STEAM_SYNC','STEAM_AUTO_IMPORT','IMPORT_MATCH','RESTORE_VOICE'])
 export default defineContentScript({
   matches: ['https://aliaskh4n.github.io/cs2d/*','http://localhost/*'],
   main() {

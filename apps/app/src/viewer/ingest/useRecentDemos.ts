@@ -10,6 +10,7 @@ export interface RecentDemo {
   scoreCt: number; scoreT: number; hasVoice: boolean; savedAt: number
   storage?: 'cloud' | 'session'; source?: string; sourceId?: string; analysis?: MatchAnalysis
   date?: number; mode?: string; teamCt?: string; teamT?: string; myScore?: number; opponentScore?: number; outcome?: 'win' | 'loss' | 'draw'; competition?: string
+  voiceStatus?: 'available' | 'omitted' | 'absent'
 }
 export interface RecentDemoPayload { replay: Replay; voice: VoiceData | null }
 const list = ref<RecentDemo[]>([])
@@ -33,7 +34,8 @@ export function useRecentDemos() {
     const analysis = analyzeMatch(input.replay)
     const meta = { ...summarizeMatch(input.replay, '76561198920126438'), fileName: input.fileName, map: input.replay.map, rounds: analysis.rounds,
       scoreCt: input.replay.finalScoreCt ?? 0, scoreT: input.replay.finalScoreT ?? 0,
-      hasVoice: keepCloudVoice.value && (input.voice?.tracks?.length ?? 0) > 0, analysis }
+      hasVoice: keepCloudVoice.value && (input.voice?.tracks?.length ?? 0) > 0,
+      voiceStatus: !(input.voice?.tracks?.length) ? 'absent' as const : keepCloudVoice.value ? 'available' as const : 'omitted' as const, analysis }
     if (signedIn.value) {
       const blob = await exportArchive({ ...input, voice: keepCloudVoice.value ? input.voice : null, comments: [] })
       const id = await uploadCloudArchive(blob, meta)

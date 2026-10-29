@@ -6,7 +6,7 @@ export interface SourceMatch {
 }
 export interface ConnectorState {
   libraryVersion?: number
-  faceit?: { nickname: string; playerId: string }; steam?: { steamId: string; checkedAt?: number; loginRequired?: boolean; error?: string }
+  faceit?: { nickname: string; playerId: string }; steam?: { steamId: string; checkedAt?: number; loginRequired?: boolean; error?: string; counts?: Record<string,number>; expired?: number }
   matches: SourceMatch[]; active: { matchId: string; label?: string; phase: string; loaded?: number; total?: number; error?: string; meta?: {map?: string; source?: string} }[]
 }
 export function extensionRequest<T = Record<string, unknown>>(command: string, payload: Record<string, unknown> = {}, timeout = 30000): Promise<T> {

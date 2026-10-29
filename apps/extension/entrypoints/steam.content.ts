@@ -4,8 +4,12 @@ import { steamPage } from '../utils/steamPage'
 export default defineContentScript({
   matches: ['https://steamcommunity.com/*/gcpd/730*'],
   main() {
-    const steamId = location.pathname.match(/\/profiles\/(7656119\d{10})\/gcpd\/730/)?.[1]
-    const mode = new URLSearchParams(location.search).get('tab')?.replace('matchhistory','')
+    let steamId = location.pathname.match(/\/profiles\/(7656119\d{10})\/gcpd\/730/)?.[1]
+    if (!steamId) {
+      try { steamId = JSON.parse(document.querySelector('#application_config')?.getAttribute('data-userinfo') ?? '{}').steamid } catch { /* older pages use g_steamID */ }
+      steamId ??= document.documentElement.innerHTML.match(/\bg_steamID\s*=\s*["'](7656119\d{10})["']/)?.[1]
+    }
+    const mode = new URLSearchParams(location.search).get('tab')?.replace('matchhistory','').replace('competitivepermap','competitive')
     if (!steamId || !mode || !['premier','competitive','wingman'].includes(mode)) return
     let previous = ''
     async function scan() {

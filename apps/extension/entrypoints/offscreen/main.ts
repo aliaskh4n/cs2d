@@ -139,8 +139,13 @@ async function process(job: Job) {
     ensureLive()
     report({ type: 'JOB_PROGRESS', matchId, patch: { phase: 'storing' } })
     const fileName = fileNameFromUrl(url).replace(/\.(gz|zst|zip|bz2)$/i, '')
-    const blob = await exportArchive({ fileName, replay, voice: config.keepVoice ? voice : null, comments: [] })
+    const keepVoice = job.meta?.includeVoice ?? config.keepVoice !== false
+    const recordedVoice = voice.tracks.some(track => track.packets.length > 0)
+    const blob = await exportArchive({ fileName, replay, voice: keepVoice ? voice : null, comments: [] })
     const meta: ArchiveMetaRow = {
+      replaceId: job.meta?.replaceId,
+      hasVoice: keepVoice && recordedVoice,
+      voiceStatus: !recordedVoice ? 'absent' : keepVoice ? 'available' : 'omitted',
       ...summarizeMatch(replay, '76561198920126438'),
       matchId,
       sourceId: job.meta?.sourceId ?? matchId,

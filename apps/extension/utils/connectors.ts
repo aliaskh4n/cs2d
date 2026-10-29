@@ -3,7 +3,7 @@ import type { Job } from './protocol'
 import { faceitJson } from './faceitApi'
 import { fetchPayload, signDemoUrl, demoUrlFromPayload, extractMeta } from './faceitDownload'
 export interface SourceMatch { id: string; source: 'faceit' | 'steam'; label: string; map?: string; date?: number; mode?: string; kills?: number; headshots?: number; hsPercent?: number; url?: string }
-interface Sources { faceit?: { nickname: string; playerId: string }; steam?: { steamId: string; checkedAt?: number; loginRequired?: boolean; error?: string }; matches: SourceMatch[] }
+interface Sources { faceit?: { nickname: string; playerId: string }; steam?: { steamId: string; checkedAt?: number; loginRequired?: boolean; error?: string; counts?: Record<string,number>; expired?: number }; matches: SourceMatch[] }
 const KEY = 'providerSources'
 export async function sources(): Promise<Sources> { return (await chrome.storage.session.get(KEY))[KEY] ?? { matches: [] } }
 let sourceWrite: Promise<void> = Promise.resolve()
@@ -37,7 +37,7 @@ export async function syncFaceit(nickname: string) {
 export function validSteamDemo(value: string): boolean {
   try { const u = new URL(value); return ['http:', 'https:'].includes(u.protocol) && (u.hostname === 'valve.net' || u.hostname.endsWith('.valve.net') || u.hostname.endsWith('.steamcontent.com')) && /\.dem(?:\.(?:bz2|gz|zst))?$/i.test(u.pathname) } catch { return false }
 }
-export async function discoverSteam(steamId: string, items: SourceMatch[], status: { checkedAt?: number; loginRequired?: boolean; error?: string } = {}) {
+export async function discoverSteam(steamId: string, items: SourceMatch[], status: { checkedAt?: number; loginRequired?: boolean; error?: string; counts?: Record<string,number>; expired?: number } = {}) {
   if (!/^7656119\d{10}$/.test(steamId)) throw new Error('Steam profile could not be identified')
   const accepted = items.filter(m => m.source === 'steam' && m.url && validSteamDemo(m.url) && typeof m.id === 'string').map(m => ({ ...m, id: m.id.slice(0,100), label: String(m.label).slice(0,240) }))
   await updateSources(state => {
@@ -48,7 +48,7 @@ export async function discoverSteam(steamId: string, items: SourceMatch[], statu
 }
 export async function sourceJob(source: string, id: string): Promise<Job> {
   const state = await sources()
-  const item = state.matches.find(m => m.source === source && m.id === id)
+  const item: SourceMatch | undefined = state.matches.find(m => m.source === source && m.id === id) ?? (source === 'faceit' && /^[\w-]{1,100}$/.test(id) ? { id, source: 'faceit', label: 'FACEIT' } : undefined)
   if (!item) throw new Error('Sync the provider before importing this match')
   if (source === 'steam') {
     if (!item.url || !validSteamDemo(item.url)) throw new Error('Steam demo URL is not available')

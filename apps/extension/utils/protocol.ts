@@ -13,6 +13,8 @@ export type Phase = 'queued' | 'downloading' | 'decompressing' | 'parsing' | 'bu
 /** Rich match info scraped from Faceit's API, shown on the card before/while the
  *  demo is parsed (the parser later fills in the authoritative map/score). */
 export interface MatchMeta {
+  replaceId?: string
+  includeVoice?: boolean
   mode?: string
   sourceId?: string
   teamA?: string
@@ -57,6 +59,9 @@ export interface ActiveJob {
 
 /** Metadata for a stored .cs2dv (no blob; that's read on demand). */
 export interface ArchiveMetaRow {
+  replaceId?: string
+  hasVoice?: boolean
+  voiceStatus?: 'available' | 'omitted' | 'absent'
   mode?: string
   myScore?: number
   opponentScore?: number

@@ -14,7 +14,7 @@ export async function listArchives(): Promise<ArchiveMetaRow[]> {
   return cached
 }
 export async function putArchive(meta:ArchiveMetaRow,blob:Blob): Promise<void> {
-  meta.cloudId = await storeCloudArchive({fileName:meta.fileName,map:meta.map,rounds:meta.analysis?.rounds??0,scoreCt:meta.scoreCt,scoreT:meta.scoreT,analysis:meta.analysis,source:meta.source,sourceId:meta.sourceId??meta.matchId,date:meta.date,mode:meta.mode,teamCt:meta.teamCt,teamT:meta.teamT,myScore:meta.myScore,opponentScore:meta.opponentScore,outcome:meta.outcome,competition:meta.competition},blob)
+  meta.cloudId = await storeCloudArchive({fileName:meta.fileName,map:meta.map,rounds:meta.analysis?.rounds??0,scoreCt:meta.scoreCt,scoreT:meta.scoreT,analysis:meta.analysis,source:meta.source,sourceId:meta.sourceId??meta.matchId,date:meta.date,mode:meta.mode,teamCt:meta.teamCt,teamT:meta.teamT,myScore:meta.myScore,opponentScore:meta.opponentScore,outcome:meta.outcome,competition:meta.competition,hasVoice:meta.hasVoice,voiceStatus:meta.voiceStatus,replaceId:meta.replaceId},blob)
   lastRead = 0
 }
 export async function totalBytes(): Promise<number> { return (await listArchives()).reduce((sum,m)=>sum+m.sizeBytes,0) }

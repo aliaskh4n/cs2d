@@ -17,8 +17,8 @@ statistics, seekable highlights, cloud history and a provider companion.
 - No replay IndexedDB or persistent raw-demo cache is created. Download,
   decompression and parsing use browser memory. Without a cloud login, a replay
   exists in the current tab only. The app shell itself may be cached by the PWA.
-- Voice is omitted from cloud archives by default to save space. Enable the
-  voice checkbox before import to include it. The original `.dem` is discarded;
+- Recorded voice is included in cloud archives by default. The voice checkbox
+  disables it for subsequent imports if space needs to be saved. The original `.dem` is discarded;
   the cloud archive retains the 2D replay and analysis, not a native CS2 demo.
 
 ## Identity and provider imports
@@ -34,7 +34,7 @@ Steam Personal Game Data (Premier, Competitive and Wingman). Downloads are
 parsed in an extension offscreen document; only the compressed archive and its
 statistics go to the cloud. The raw file is not saved to Downloads.
 
-Companion 1.2.0 uses Chrome scripting in a provider tab, so an already-open
+Companion 1.2.1 uses Chrome scripting in a provider tab, so an already-open
 FACEIT page does not need a previously injected API message listener. Steam
 checks all three histories in one reused, inactive tab. Automatic checking and
 queueing run on sign-in and every five minutes while the cloud page is visible;
@@ -43,6 +43,20 @@ not a server cron job. Expired sessions show a Steam sign-in link. Demo processi
 waits for an explicit offscreen readiness reply. The offscreen document retrieves
 its cloud configuration through a runtime message restricted to that document,
 because Chrome offscreen documents do not expose the storage API.
+
+Steam history is requested using `/my/gcpd/730`, including the Premier,
+per-map Competitive and Wingman tabs. The reader follows Steam's AJAX
+continuation while replays remain available. Logged-out application configuration,
+account mismatches and public-profile redirects are recognized instead of being
+reported as a successful empty history. Mode counts and unavailable rows are
+shown separately. Session IDs and continuation tokens stay inside Steam.
+
+New archives record whether voice is present, omitted by preference, or absent
+from the source demo. Older provider imports have a Restore recorded voice action.
+It re-fetches and parses an available source demo, then atomically replaces the
+compact archive under its existing ID, preserving the title and comments. Failed
+or incomplete restores leave the original replay accessible. Restoration cannot
+recover voice absent from the source, or download an expired source demo.
 
 Match history groups games by date and displays map, mode, source, final score,
 personal result, K/D/A, ADR, HS and Deagle records. Personal results use the
@@ -88,6 +102,10 @@ all Steam history modes, automatic queueing, expired demo errors, login recovery
 populated history filters and responsive layouts. It requires Playwright Chromium.
 These fixtures do not verify the owner's live Steam/FACEIT session or change
 their cloud library.
+`node scripts/smoke-voice.mjs` encodes a short synthetic tone to real Opus,
+checks exact packet preservation through the archive codec, decodes the packets
+to nonzero audio samples, and loads the archive through an isolated cloud response
+to verify the player's visible Voice control. It does not record anyone's speech.
 
 No FACEIT rating is invented. ADR and KAST are calculated from the recorded demo;
 highlights are recorded multi-kills, Deagle sequences and surviving clutch wins.

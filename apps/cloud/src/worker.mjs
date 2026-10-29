@@ -79,11 +79,15 @@ export class CloudLibrary extends DurableObject {
     if (path[0] === 'uploads' && !path[1] && request.method === 'POST') {
       const body = await request.json()
       const { fileSize, fileName, map, rounds, scoreCt, scoreT, hasVoice, analysis, source, sourceId } = body
+      let replacement
       if (!Number.isInteger(fileSize) || fileSize < 1 || fileSize > MAX_ARCHIVE || typeof fileName !== 'string' || fileName.length > 240 || typeof map !== 'string') return json({ error: 'Invalid replay metadata or archive exceeds 64 MiB' }, 400)
       if (typeof sourceId === 'string' && ['faceit','steam'].includes(source)) {
-        const existing = [...this.sql.exec("SELECT id FROM matches WHERE json_extract(metadata,'$.source')=? AND json_extract(metadata,'$.sourceId')=? LIMIT 1",source,sourceId)][0]
-        if (existing) return json({existingId: existing.id})
+        const existing = [...this.sql.exec("SELECT * FROM matches WHERE json_extract(metadata,'$.source')=? AND json_extract(metadata,'$.sourceId')=? LIMIT 1",source,sourceId)][0]
+        if (existing && !body.replaceId) return json({existingId: existing.id})
+        if (body.replaceId && existing?.id === body.replaceId) replacement = existing
       }
+      if (body.replaceId && !replacement) return json({ error: 'The original replay could not be matched for voice restoration' }, 409)
+      if (replacement && JSON.parse(replacement.metadata).hasVoice && !hasVoice) return json({ error: 'Cannot replace a replay with one that loses existing voice' }, 409)
       const used = this.sql.exec('SELECT COALESCE(SUM(size),0) AS size FROM matches').one().size
       const pending = this.sql.exec('SELECT COALESCE(SUM(expected),0) AS size FROM uploads').one().size
       if (used + pending + fileSize > Number(this.env.MAX_STORAGE_BYTES)) return json({ error: 'Cloud library is full. Remove a replay before importing another.' }, 413)
@@ -94,7 +98,7 @@ export class CloudLibrary extends DurableObject {
         details.myScore = body.myScore; details.opponentScore = body.opponentScore
         details.outcome = body.myScore > body.opponentScore ? 'win' : body.myScore < body.opponentScore ? 'loss' : 'draw'
       }
-      const metadata = JSON.stringify({ fileName, map, rounds, scoreCt, scoreT, hasVoice: !!hasVoice, analysis, ...details, source: ['faceit', 'steam', 'imported'].includes(source) ? source : 'imported', sourceId: typeof sourceId === 'string' ? sourceId.slice(0,100) : undefined })
+      const metadata = JSON.stringify({ fileName, map, rounds, scoreCt, scoreT, hasVoice: !!hasVoice, voiceStatus: hasVoice ? 'available' : body.voiceStatus === 'absent' ? 'absent' : 'omitted', analysis, ...details, source: ['faceit', 'steam', 'imported'].includes(source) ? source : 'imported', sourceId: typeof sourceId === 'string' ? sourceId.slice(0,100) : undefined, ...(replacement ? {_replaceId: replacement.id} : {}) })
       if (metadata.length > 262144) return json({ error: 'Statistics are too large' }, 400)
       const id = crypto.randomUUID()
       this.sql.exec('INSERT INTO uploads VALUES(?,?,?,?)', id, metadata, fileSize, Date.now())
@@ -117,9 +121,18 @@ export class CloudLibrary extends DurableObject {
       if (path[2] === 'complete' && request.method === 'POST') {
         const { size, count } = this.sql.exec('SELECT COALESCE(SUM(LENGTH(data)),0) AS size, COUNT(*) AS count FROM parts WHERE upload_id=?', uploadId).one()
         if (size !== upload.expected || count !== Math.ceil(upload.expected / PART_SIZE)) return json({ error: 'Upload is incomplete' }, 409)
-        const id = crypto.randomUUID()
+        const metadata = JSON.parse(upload.metadata)
+        const replacement = metadata._replaceId ? [...this.sql.exec('SELECT * FROM matches WHERE id=?',metadata._replaceId)][0] : undefined
+        if (metadata._replaceId && !replacement) return json({ error: 'Original replay was removed during restoration' }, 409)
+        if (replacement && JSON.parse(replacement.metadata).hasVoice && !metadata.hasVoice) return json({ error: 'Cannot remove existing voice during restoration' }, 409)
+        const id = replacement?.id ?? crypto.randomUUID()
+        delete metadata._replaceId
         this.ctx.storage.transactionSync(() => {
-          this.sql.exec('INSERT INTO matches VALUES(?,?,?,?,?)', id, upload.metadata, uploadId, size, Date.now())
+          if (replacement) {
+            const previous = JSON.parse(replacement.metadata)
+            this.sql.exec('UPDATE matches SET metadata=?, upload_id=?, size=? WHERE id=?', JSON.stringify({...previous,...metadata,title:previous.title}), uploadId, size, id)
+            this.sql.exec('DELETE FROM parts WHERE upload_id=?',replacement.upload_id)
+          } else this.sql.exec('INSERT INTO matches VALUES(?,?,?,?,?)', id, JSON.stringify(metadata), uploadId, size, Date.now())
           this.sql.exec('DELETE FROM uploads WHERE id=?', uploadId)
         })
         return json({ id })

@@ -514,7 +514,7 @@
     "install3": "Reload this page. Sign in to FACEIT and Steam in the same browser.",
     "downloadExtension": "Download companion",
     "keepVoice": "Keep voice comms in the cloud replay",
-    "voiceHint": "Off by default to reduce storage.",
+    "voiceHint": "Enabled by default. Recorded comms stay in the private cloud. For older imports, use Restore recorded voice. Voice absent from the source demo cannot be recovered.",
     "processing": "Import queue",
     "cloudUpload": "Uploading to the cloud",
     "available": "Matches available to import",
@@ -563,7 +563,7 @@
     "steamWaiting": "Waiting for the Steam connection",
     "checkNow": "Check now",
     "loginSteamBrowser": "Open Steam sign-in",
-    "updateExtension": "Update the companion to version 1.2.0, then reload this site.",
+    "updateExtension": "Update the companion to version 1.2.1 and reload this site.",
     "uploadedDemo": "Uploaded demo",
     "filteredMatches": "Search results",
     "inProgress": "in progress",
@@ -601,6 +601,18 @@
       "win": "Victories",
       "loss": "Defeats",
       "draw": "Draws"
-    }
+    },
+    "voiceLabel": "Voice",
+    "restoreVoice": "Restore recorded voice",
+    "voiceRestoreQueued": "Voice restoration queued. The original replay stays available until its replacement is fully uploaded. Voice can only be restored if the source demo still exists and contains recorded comms.",
+    "voicePlayerHint": "Listen using the Voice button in the 2D player",
+    "voiceState": {
+      "available": "saved",
+      "omitted": "excluded at import",
+      "absent": "not recorded in this demo",
+      "unknown": "not checked"
+    },
+    "steamExpired": "Matches without an available demo",
+    "openPremierHistory": "Open Premier history on Steam"
   }
 }

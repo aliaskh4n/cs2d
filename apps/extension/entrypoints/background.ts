@@ -58,6 +58,18 @@ export default defineBackground(() => {
         case 'STEAM_AUTO_IMPORT':
           await chrome.storage.session.set({ steamAutoImport: !!payload.enabled })
           return { queued: payload.enabled ? await queueSteam() : 0 }
+        case 'RESTORE_VOICE': {
+          const library = await cloudFetch<{matches: {id:string;source:string;sourceId?:string;map:string;fileName:string;hasVoice?:boolean}[]}>('/matches')
+          const match = library.matches.find(m => m.id === payload.id)
+          if (!match?.sourceId || !['faceit','steam'].includes(match.source)) throw new Error('Voice restoration requires an available FACEIT or Steam demo.')
+          if (match.source === 'steam') {
+            const result = await syncSteamHistory(true)
+            if (result.loginRequired) throw new Error('Sign in to Steam in this browser before restoring voice.')
+            if (result.error) throw new Error(result.error)
+          }
+          enqueue({matchId:match.source==='steam'?`steam-${match.sourceId}`:match.sourceId,url:'',label:match.map||match.fileName,meta:{source:match.source,sourceId:match.sourceId,map:match.map,replaceId:match.id,includeVoice:true}})
+          return {ok:true}
+        }
         case 'IMPORT_MATCH': {
           // Resolve signed URLs when the job actually starts; they can expire while queued.
           const item = (await sources()).matches.find(m => m.id === payload.id && m.source === payload.source)
@@ -186,7 +198,11 @@ export default defineBackground(() => {
     running = true
     log.info('processing', { matchId: job.matchId })
     try {
-      if (!job.url && job.meta?.source && job.meta.sourceId) Object.assign(job, await sourceJob(job.meta.source,job.meta.sourceId))
+      if (!job.url && job.meta?.source && job.meta.sourceId) {
+        const { replaceId, includeVoice } = job.meta
+        Object.assign(job, await sourceJob(job.meta.source,job.meta.sourceId))
+        job.meta = {...job.meta,replaceId,includeVoice}
+      }
       await ensureOffscreen()
       await browser_sendMessage({ target: 'offscreen', type: 'PROCESS', job })
     } catch (err) {
