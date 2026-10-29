@@ -10,14 +10,19 @@ export interface ConnectorState {
 export function extensionRequest<T = Record<string, unknown>>(command: string, payload: Record<string, unknown> = {}, timeout = 30000): Promise<T> {
   const requestId = crypto.randomUUID()
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => { window.removeEventListener('message', onMessage); reject(new Error('Companion extension is not responding. Install it and reload this page.')) }, timeout)
+    let retry: ReturnType<typeof setInterval> | undefined
+    const cleanup = () => { clearTimeout(timer); clearInterval(retry); window.removeEventListener('message', onMessage) }
+    const timer = setTimeout(() => { cleanup(); reject(new Error('Companion extension is not responding. Install it and reload this page.')) }, timeout)
     function onMessage(event: MessageEvent) {
       if (event.source !== window || event.origin !== location.origin || event.data?.source !== 'cs2dv-extension' || event.data?.requestId !== requestId) return
-      clearTimeout(timer); window.removeEventListener('message', onMessage)
+      cleanup()
       if (event.data.error) reject(new Error(event.data.error))
       else resolve(event.data.result)
     }
     window.addEventListener('message', onMessage)
-    window.postMessage({ source: 'cs2dv-app', kind: 'connector', requestId, command, payload }, location.origin)
+    const send = () => window.postMessage({ source: 'cs2dv-app', kind: 'connector', requestId, command, payload }, location.origin)
+    // The content script may start after Vue mounts. Only retry the harmless handshake.
+    if (command === 'PING') retry = setInterval(send, 250)
+    send()
   })
 }
