@@ -28,7 +28,7 @@ test('CORS refuses unrelated websites and upload metadata contains no credential
 })
 test('multipart upload remains invisible until all chunks commit, then streams identical bytes',async()=>{
   const bytes=new Uint8Array(700000);for(let i=0;i<bytes.length;i++)bytes[i]=i%251
-  const metadata={fileName:'record.cs2dv',map:'de_dust2',rounds:24,scoreCt:13,scoreT:11,fileSize:bytes.length,source:'faceit',sourceId:'test-match',token:'must-not-be-stored',analysis:{rounds:24,players:[],moments:[]}}
+  const metadata={fileName:'record.cs2dv',map:'de_dust2',rounds:24,scoreCt:13,scoreT:11,fileSize:bytes.length,source:'faceit',sourceId:'test-match',token:'must-not-be-stored',date:1730000000000,mode:'premier',teamCt:'Team A',teamT:'Team B',myScore:11,opponentScore:13,outcome:'win',analysis:{rounds:24,players:[],moments:[]}}
   const start=await request('/uploads',{method:'POST',body:JSON.stringify(metadata)});assert.equal(start.status,200)
   const {uploadId,partSize}=await start.json()
   assert.equal((await request(`/uploads/${uploadId}/complete`,{method:'POST'})).status,409)
@@ -38,6 +38,7 @@ test('multipart upload remains invisible until all chunks commit, then streams i
   const committed=await request(`/uploads/${uploadId}/complete`,{method:'POST'});assert.equal(committed.status,200)
   const {id}=await committed.json()
   const matches=await (await request('/matches')).json();assert.equal(matches.totalBytes,bytes.length);assert.equal(matches.matches[0].token,undefined)
+  assert.equal(matches.matches[0].date,metadata.date);assert.equal(matches.matches[0].teamCt,'Team A');assert.equal(matches.matches[0].mode,'premier');assert.equal(matches.matches[0].myScore,11);assert.equal(matches.matches[0].outcome,'loss')
   const downloaded=await request(`/matches/${id}/archive`);assert.equal(downloaded.headers.get('cache-control'),'no-store');assert.deepEqual(new Uint8Array(await downloaded.arrayBuffer()),bytes)
   assert.equal((await request(`/matches/${id}/comments`,{method:'PUT',body:'[{"text":"nice round"}]'})).status,200)
   assert.deepEqual(await (await request(`/matches/${id}/comments`)).json(),[{text:'nice round'}])

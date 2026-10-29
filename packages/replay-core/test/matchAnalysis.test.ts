@@ -1,7 +1,7 @@
 // Regression tests for weapon records, changing sides, non-duel deaths and recorded moments.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { analyzeMatch, weaponCode } from '../src/matchAnalysis.ts'
+import { analyzeMatch, weaponCode, summarizeMatch } from '../src/matchAnalysis.ts'
 import type { Replay, Round, KillEvent } from '../src/schema.ts'
 const ids = ['a','b','c','d','e','f']
 function kill(attacker: string|null, victim: string, t: number, weapon='deagle', headshot=true): KillEvent {
@@ -40,3 +40,10 @@ test('knife openers are excluded and real round indices stay seekable',()=>{
   assert.equal(report.moments[0]?.roundIndex,1);assert.equal(report.moments[0]?.roundNumber,1);assert.equal(report.moments[0]?.t,1)
 })
 test('weapon names normalize without confusing Deagle with another weapon',()=>{assert.equal(weaponCode('Desert Eagle'),'deagle');assert.equal(weaponCode('weapon_deagle'),'deagle');assert.equal(weaponCode('revolver'),'revolver')})
+test('personal result follows the final team after halftime instead of the starting side',()=>{
+  const game=replay([round([],false),round([],true)])
+  const a=summarizeMatch(game,'a');assert.equal(a.myScore,7);assert.equal(a.opponentScore,13);assert.equal(a.outcome,'loss')
+  const c=summarizeMatch(game,'c');assert.equal(c.myScore,13);assert.equal(c.opponentScore,7);assert.equal(c.outcome,'win')
+  game.finalScoreT=13;assert.equal(summarizeMatch(game,'a').outcome,'draw')
+  assert.equal(summarizeMatch(game,'missing-player').outcome,undefined)
+})

@@ -1,5 +1,6 @@
 import { defineBackground } from '#imports'
-import { configureCloud } from '../utils/cloud'
+import { configureCloud, cloudConfig, cloudFetch } from '../utils/cloud'
+import { syncSteamHistory } from '../utils/steamSync'
 import { sources, syncFaceit, discoverSteam, sourceJob } from '../utils/connectors'
 import { analyzeMatch } from '@cs2/replay-core/matchAnalysis'
 import {
@@ -39,12 +40,24 @@ export default defineBackground(() => {
       switch (msg.command) {
         case 'PING': return { version: chrome.runtime.getManifest().version }
         case 'CLOUD_CONFIG': await configureCloud(payload); return {ok:true}
-        case 'SOURCES_STATE': return { ...await sources(), active: [...active.values()] }
+        case 'SOURCES_STATE': return { ...await sources(), active: [...active.values()], libraryVersion }
         case 'FACEIT_SYNC': return syncFaceit(payload.nickname)
-        case 'STEAM_SYNC':
-          for (const tab of ['matchhistorypremier','matchhistorycompetitive','matchhistorywingman']) await chrome.tabs.create({url:`https://steamcommunity.com/my/gcpd/730/?tab=${tab}`})
-          return {ok:true}
-        case 'STEAM_DISCOVER': return discoverSteam(payload.steamId,payload.matches)
+        case 'STEAM_SYNC': {
+          const result = await syncSteamHistory(!!payload.force)
+          const queued = payload.autoImport ? await queueSteam() : 0
+          return { ...result, queued }
+        }
+        case 'STEAM_DISCOVER': {
+          const owner = await cloudFetch<{steamId: string}>('/me')
+          if (payload.steamId !== owner.steamId) throw new Error('Open the Steam history of your signed-in cloud account.')
+          const result = await discoverSteam(payload.steamId,payload.matches, { loginRequired: false })
+          const { steamAutoImport } = await chrome.storage.session.get('steamAutoImport')
+          if (steamAutoImport) await queueSteam()
+          return result
+        }
+        case 'STEAM_AUTO_IMPORT':
+          await chrome.storage.session.set({ steamAutoImport: !!payload.enabled })
+          return { queued: payload.enabled ? await queueSteam() : 0 }
         case 'IMPORT_MATCH': {
           // Resolve signed URLs when the job actually starts; they can expire while queued.
           const item = (await sources()).matches.find(m => m.id === payload.id && m.source === payload.source)
@@ -63,11 +76,29 @@ export default defineBackground(() => {
   const active = new Map<string, ActiveJob>()
   const queue: Job[] = []
   let running = false
+  let libraryVersion = 0
+  const attemptedSteam = new Set<string>()
+  async function queueSteam() {
+    await cloudConfig()
+    const stored = await listArchives()
+    let queued = 0
+    for (const item of (await sources()).matches.filter(m => m.source === 'steam')) {
+      if (attemptedSteam.has(item.id) || stored.some(m => m.source === 'steam' && m.sourceId === item.id)) continue
+      attemptedSteam.add(item.id)
+      enqueue({ matchId: `steam-${item.id}`, url: '', label: item.label, meta: { source: 'steam', sourceId: item.id, map: item.map, date: item.date, mode: item.mode } })
+      queued++
+    }
+    return queued
+  }
 
-  browser_onMessage((msg, _sender, sendResponse) => {
+  browser_onMessage((msg, sender, sendResponse) => {
     // Overlay -> background.
     if (msg.target === 'background' && 'type' in msg) {
       switch (msg.type) {
+        case 'GET_CLOUD_CONFIG':
+          if (sender.id !== chrome.runtime.id || sender.url !== chrome.runtime.getURL(OFFSCREEN)) return false
+          void cloudConfig().then(sendResponse).catch(() => sendResponse(null))
+          return true
         case 'ENQUEUE':
           enqueue(msg.job)
           return false
@@ -108,6 +139,7 @@ export default defineBackground(() => {
         case 'JOB_DONE':
           log.info('job done', { matchId: msg.matchId })
           active.delete(msg.matchId)
+          libraryVersion = Date.now()
           finishAndPump()
           return false
         case 'JOB_ERROR': {
@@ -127,12 +159,13 @@ export default defineBackground(() => {
   })
 
   function enqueue(job: Job) {
+    if (active.get(job.matchId)?.error) active.delete(job.matchId)
     if (active.has(job.matchId) || queue.some((q) => q.matchId === job.matchId)) {
       log.info('enqueue ignored (already active/queued)', { matchId: job.matchId })
       return
     }
     log.info('enqueue', { matchId: job.matchId, label: job.label })
-    active.set(job.matchId, { matchId: job.matchId, label: job.label, phase: 'queued', loaded: 0, total: 0 })
+    active.set(job.matchId, { matchId: job.matchId, label: job.label, meta: job.meta, phase: 'queued', loaded: 0, total: 0 })
     queue.push(job)
     void pump()
   }
@@ -221,12 +254,17 @@ async function importBlob(fileName: string, base64: string): Promise<{ ok: boole
 
 // --- offscreen lifecycle ----------------------------------------------------
 async function ensureOffscreen() {
-  if (await chrome.offscreen.hasDocument?.()) return
-  await chrome.offscreen.createDocument({
+  if (!await chrome.offscreen.hasDocument?.()) await chrome.offscreen.createDocument({
     url: OFFSCREEN,
     reasons: [chrome.offscreen.Reason.BLOBS],
-    justification: 'Download and parse CS2 demo files into the local library.',
+    justification: 'Process demos in memory and save compact replays to the private cloud.',
   })
+  // Imports and WASM setup can finish after createDocument resolves.
+  for (let attempt = 0; attempt < 40; attempt++) {
+    try { if ((await chrome.runtime.sendMessage({ target: 'offscreen', type: 'PING' }))?.ready) return } catch { /* wait for the listener */ }
+    await new Promise(resolve => setTimeout(resolve, 100))
+  }
+  throw new Error('Demo processor did not start. Reload the extension and retry the import.')
 }
 
 // --- thin chrome wrappers (typed) -------------------------------------------

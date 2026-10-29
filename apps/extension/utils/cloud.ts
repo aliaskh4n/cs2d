@@ -6,7 +6,10 @@ export async function configureCloud(value: CloudConfig) {
   await chrome.storage.session.set({ cloudConfig: value })
 }
 export async function cloudConfig(): Promise<CloudConfig> {
-  const { cloudConfig: value } = await chrome.storage.session.get('cloudConfig')
+  // Offscreen documents expose runtime only; storage belongs to the service worker.
+  const value = chrome.storage?.session
+    ? (await chrome.storage.session.get('cloudConfig')).cloudConfig
+    : await chrome.runtime.sendMessage({ target: 'background', type: 'GET_CLOUD_CONFIG' })
   if (!value?.token || value.api !== EXPECTED_API) throw new Error('Open the cloud site, sign in with Steam and connect the extension first.')
   return value
 }

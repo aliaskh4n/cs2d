@@ -34,6 +34,23 @@ Steam Personal Game Data (Premier, Competitive and Wingman). Downloads are
 parsed in an extension offscreen document; only the compressed archive and its
 statistics go to the cloud. The raw file is not saved to Downloads.
 
+Companion 1.2.0 uses Chrome scripting in a provider tab, so an already-open
+FACEIT page does not need a previously injected API message listener. Steam
+checks all three histories in one reused, inactive tab. Automatic checking and
+queueing run on sign-in and every five minutes while the cloud page is visible;
+the Auto switch disables new automatic imports. This is browser-session sync,
+not a server cron job. Expired sessions show a Steam sign-in link. Demo processing
+waits for an explicit offscreen readiness reply. The offscreen document retrieves
+its cloud configuration through a runtime message restricted to that document,
+because Chrome offscreen documents do not expose the storage API.
+
+Match history groups games by date and displays map, mode, source, final score,
+personal result, K/D/A, ADR, HS and Deagle records. Personal results use the
+player's side at the end of the replay, including side changes and overtime.
+Game dates and results are saved alongside new cloud archives. Older archives
+without that metadata show their final CT/T score and are labelled with the
+date they were added, rather than an invented match date or personal result.
+
 Provider web endpoints and page layouts can change. Expired demos and denied
 downloads are reported as failures, not fabricated replays. Connecting now
 cannot reconstruct unavailable historical demos. Weapon leaderboards cover
@@ -65,6 +82,12 @@ private access, multipart cloud round trips, quota rejection and invalid OpenID
 assertions. `node scripts/smoke-browser.mjs` checks the production UI, moment
 seeking, the real WASM bzip2 decoder, mobile layout and absence of local replay
 databases against a running preview on port 4174. Set `CHROME_PATH` on Linux.
+`PLAYWRIGHT_BROWSERS_PATH=… node scripts/smoke-matchroom.mjs` additionally checks
+the installed extension against isolated provider fixtures: existing FACEIT tabs,
+all Steam history modes, automatic queueing, expired demo errors, login recovery,
+populated history filters and responsive layouts. It requires Playwright Chromium.
+These fixtures do not verify the owner's live Steam/FACEIT session or change
+their cloud library.
 
 No FACEIT rating is invented. ADR and KAST are calculated from the recorded demo;
 highlights are recorded multi-kills, Deagle sequences and surviving clutch wins.

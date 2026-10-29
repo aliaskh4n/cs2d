@@ -62,7 +62,7 @@ function factionScores(p: Record<string, any>): { a?: number; b?: number } {
 export function extractMeta(p: Record<string, any>): MatchMeta {
   const teams = p?.teams ?? {}
   const rawDate = p?.finishedAt ?? p?.startedAt ?? p?.configuredAt
-  const date = rawDate ? (typeof rawDate === 'number' ? rawDate : Date.parse(rawDate) || undefined) : undefined
+  const date = rawDate ? (typeof rawDate === 'number' ? rawDate * (rawDate < 1e12 ? 1000 : 1) : Date.parse(rawDate) || undefined) : undefined
   const { a, b } = factionScores(p)
   return {
     teamA: teams.faction1?.name,

@@ -24,7 +24,7 @@ function ensureZstd(): Promise<void> {
 import { fileNameFromUrl, type ArchiveMetaRow, type Job, type ToOffscreen } from '../../utils/protocol'
 import { putArchive } from '../../utils/db'
 import { cloudConfig } from '../../utils/cloud'
-import { analyzeMatch } from '@cs2/replay-core/matchAnalysis'
+import { analyzeMatch, summarizeMatch } from '@cs2/replay-core/matchAnalysis'
 import { exportLogs, makeLog } from '../../utils/log'
 
 const log = makeLog('offscreen')
@@ -54,8 +54,9 @@ class CancelledError extends Error {
   }
 }
 
-chrome.runtime.onMessage.addListener((msg: ToOffscreen) => {
+chrome.runtime.onMessage.addListener((msg: ToOffscreen, _sender, sendResponse) => {
   if (msg?.target !== 'offscreen') return
+  if (msg.type === 'PING') { sendResponse({ ready: true }); return }
   if (msg.type === 'PROCESS') void process(msg.job)
   else if (msg.type === 'CANCEL') {
     cancelled.add(msg.matchId)
@@ -82,7 +83,7 @@ async function process(job: Job) {
     report({ type: 'JOB_PROGRESS', matchId, patch: { phase: 'downloading', loaded: 0, total: 0 } })
     let res: Response
     try {
-      res = await fetch(url, { signal: abort.signal })
+      res = await fetch(url, { signal: abort.signal, cache: 'no-store' })
     } catch (fetchErr) {
       // A CORS block (host not in host_permissions) surfaces as a TypeError
       // "Failed to fetch" with no response, indistinguishable from a network
@@ -140,6 +141,7 @@ async function process(job: Job) {
     const fileName = fileNameFromUrl(url).replace(/\.(gz|zst|zip|bz2)$/i, '')
     const blob = await exportArchive({ fileName, replay, voice: config.keepVoice ? voice : null, comments: [] })
     const meta: ArchiveMetaRow = {
+      ...summarizeMatch(replay, '76561198920126438'),
       matchId,
       sourceId: job.meta?.sourceId ?? matchId,
       analysis: analyzeMatch(replay),
@@ -157,6 +159,7 @@ async function process(job: Job) {
       competition: job.meta?.competition,
       region: job.meta?.region,
       date: job.meta?.date,
+      mode: job.meta?.mode,
       roomUrl: job.meta?.roomUrl,
       source: job.meta?.source,
     }

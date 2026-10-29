@@ -15,6 +15,23 @@ export interface MatchMoment {
 }
 export interface MatchAnalysis { rounds: number; players: PlayerStats[]; moments: MatchMoment[] }
 
+// Scores belong to the sides at the END of the replay, rather than the starting sides.
+export function summarizeMatch(replay: Replay, steamId: string) {
+  const identity: { teamCt: string; teamT: string; myScore?: number; opponentScore?: number; outcome?: 'win' | 'loss' | 'draw' } = { teamCt: replay.finalCtName, teamT: replay.finalTName }
+  for (let ri = replay.rounds.length - 1; ri >= 0; ri--) {
+    const frames = replay.rounds[ri].frames
+    for (let fi = frames.length - 1; fi >= 0; fi--) {
+      const player = frames[fi].players.find(p => p.steamId === steamId)
+      if (!player) continue
+      identity.myScore = player.side === 'CT' ? replay.finalScoreCt : replay.finalScoreT
+      identity.opponentScore = player.side === 'CT' ? replay.finalScoreT : replay.finalScoreCt
+      identity.outcome = identity.myScore > identity.opponentScore ? 'win' : identity.myScore < identity.opponentScore ? 'loss' : 'draw'
+      return identity
+    }
+  }
+  return identity
+}
+
 export function weaponCode(value: string): string {
   const code = value.toLowerCase().replace(/^weapon_/, '').replace(/[ -]/g, '_')
   return code === 'desert_eagle' || code === 'deserteagle' ? 'deagle' : code

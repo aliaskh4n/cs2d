@@ -87,7 +87,14 @@ export class CloudLibrary extends DurableObject {
       const used = this.sql.exec('SELECT COALESCE(SUM(size),0) AS size FROM matches').one().size
       const pending = this.sql.exec('SELECT COALESCE(SUM(expected),0) AS size FROM uploads').one().size
       if (used + pending + fileSize > Number(this.env.MAX_STORAGE_BYTES)) return json({ error: 'Cloud library is full. Remove a replay before importing another.' }, 413)
-      const metadata = JSON.stringify({ fileName, map, rounds, scoreCt, scoreT, hasVoice: !!hasVoice, analysis, source: ['faceit', 'steam', 'imported'].includes(source) ? source : 'imported', sourceId: typeof sourceId === 'string' ? sourceId.slice(0,100) : undefined })
+      const details = {}
+      for (const field of ['teamCt','teamT','mode','competition']) if (typeof body[field] === 'string') details[field] = body[field].slice(0,120)
+      if (Number.isFinite(body.date) && body.date > 0 && body.date <= Date.now() + 86400000) details.date = body.date
+      if (['myScore','opponentScore'].every(field => Number.isInteger(body[field]) && body[field] >= 0 && body[field] <= 1000)) {
+        details.myScore = body.myScore; details.opponentScore = body.opponentScore
+        details.outcome = body.myScore > body.opponentScore ? 'win' : body.myScore < body.opponentScore ? 'loss' : 'draw'
+      }
+      const metadata = JSON.stringify({ fileName, map, rounds, scoreCt, scoreT, hasVoice: !!hasVoice, analysis, ...details, source: ['faceit', 'steam', 'imported'].includes(source) ? source : 'imported', sourceId: typeof sourceId === 'string' ? sourceId.slice(0,100) : undefined })
       if (metadata.length > 262144) return json({ error: 'Statistics are too large' }, 400)
       const id = crypto.randomUUID()
       this.sql.exec('INSERT INTO uploads VALUES(?,?,?,?)', id, metadata, fileSize, Date.now())

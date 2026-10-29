@@ -13,6 +13,7 @@ export type Phase = 'queued' | 'downloading' | 'decompressing' | 'parsing' | 'bu
 /** Rich match info scraped from Faceit's API, shown on the card before/while the
  *  demo is parsed (the parser later fills in the authoritative map/score). */
 export interface MatchMeta {
+  mode?: string
   sourceId?: string
   teamA?: string
   teamB?: string
@@ -56,6 +57,12 @@ export interface ActiveJob {
 
 /** Metadata for a stored .cs2dv (no blob; that's read on demand). */
 export interface ArchiveMetaRow {
+  mode?: string
+  myScore?: number
+  opponentScore?: number
+  outcome?: 'win' | 'loss' | 'draw'
+  teamCt?: string
+  teamT?: string
   cloudId?: string
   sourceId?: string
   analysis?: import("@cs2/replay-core/matchAnalysis").MatchAnalysis
@@ -80,6 +87,7 @@ export interface ArchiveMetaRow {
 
 // --- content/overlay -> background ------------------------------------------
 export type ToBackground =
+  | { target: 'background'; type: 'GET_CLOUD_CONFIG' }
   | { target: 'background'; type: 'ENQUEUE'; job: Job }
   | { target: 'background'; type: 'GET_STATE' }
   | { target: 'background'; type: 'DELETE'; matchId: string }
@@ -108,6 +116,7 @@ export interface BlobReply {
 
 // --- background -> offscreen ------------------------------------------------
 export type ToOffscreen =
+  | { target: 'offscreen'; type: 'PING' }
   | { target: 'offscreen'; type: 'PROCESS'; job: Job }
   | { target: 'offscreen'; type: 'CANCEL'; matchId: string }
 

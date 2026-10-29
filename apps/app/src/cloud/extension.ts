@@ -1,11 +1,13 @@
 // Narrow, same-page bridge to the companion extension; no provider passwords or cookies cross it.
 export interface SourceMatch {
   id: string; source: 'faceit' | 'steam'; label: string; map?: string; date?: number
+  mode?: string
   kills?: number; headshots?: number; hsPercent?: number
 }
 export interface ConnectorState {
-  faceit?: { nickname: string; playerId: string }; steam?: { steamId: string }
-  matches: SourceMatch[]; active: { matchId: string; phase: string; error?: string }[]
+  libraryVersion?: number
+  faceit?: { nickname: string; playerId: string }; steam?: { steamId: string; checkedAt?: number; loginRequired?: boolean; error?: string }
+  matches: SourceMatch[]; active: { matchId: string; label?: string; phase: string; loaded?: number; total?: number; error?: string; meta?: {map?: string; source?: string} }[]
 }
 export function extensionRequest<T = Record<string, unknown>>(command: string, payload: Record<string, unknown> = {}, timeout = 30000): Promise<T> {
   const requestId = crypto.randomUUID()

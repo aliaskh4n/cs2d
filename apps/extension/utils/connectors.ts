@@ -2,10 +2,19 @@
 import type { Job } from './protocol'
 import { faceitJson } from './faceitApi'
 import { fetchPayload, signDemoUrl, demoUrlFromPayload, extractMeta } from './faceitDownload'
-export interface SourceMatch { id: string; source: 'faceit' | 'steam'; label: string; map?: string; date?: number; kills?: number; headshots?: number; hsPercent?: number; url?: string }
-interface Sources { faceit?: { nickname: string; playerId: string }; steam?: { steamId: string }; matches: SourceMatch[] }
+export interface SourceMatch { id: string; source: 'faceit' | 'steam'; label: string; map?: string; date?: number; mode?: string; kills?: number; headshots?: number; hsPercent?: number; url?: string }
+interface Sources { faceit?: { nickname: string; playerId: string }; steam?: { steamId: string; checkedAt?: number; loginRequired?: boolean; error?: string }; matches: SourceMatch[] }
 const KEY = 'providerSources'
 export async function sources(): Promise<Sources> { return (await chrome.storage.session.get(KEY))[KEY] ?? { matches: [] } }
+let sourceWrite: Promise<void> = Promise.resolve()
+async function updateSources(change: (state: Sources) => void) {
+  const write = sourceWrite.catch(() => {}).then(async () => {
+    const state = await sources(); change(state)
+    await chrome.storage.session.set({ [KEY]: state })
+  })
+  sourceWrite = write
+  await write
+}
 const providerJson = (url:string) => faceitJson(new URL(url).pathname + new URL(url).search)
 export async function syncFaceit(nickname: string) {
   if (!/^[\w-]{1,40}$/.test(nickname)) throw new Error('Enter a FACEIT nickname')
@@ -15,26 +24,26 @@ export async function syncFaceit(nickname: string) {
   for (let page = 0; page < 100; page++) {
     const data = await providerJson(`https://www.faceit.com/api/stats/v1/stats/time/users/${player.id}/games/cs2?size=100&page=${page}`)
     if (!Array.isArray(data)) throw new Error('FACEIT did not return match history. Open your profile on FACEIT and retry.')
-    for (const m of data) if (typeof m.matchId === 'string') matches.push({ id: m.matchId, source: 'faceit', label: `${m.i1 ?? 'CS2'} · ${m.i18 ?? ''}`, map: m.i1, date: Number(m.date) || undefined, kills: Number(m.i6), headshots: Number(m.i13), hsPercent: Number(m.c4) })
+    for (const m of data) if (typeof m.matchId === 'string') matches.push({ id: m.matchId, source: 'faceit', label: `${m.i1 ?? 'CS2'} · ${m.i18 ?? ''}`, map: m.i1, date: Number(m.date) ? Number(m.date) * (Number(m.date) < 1e12 ? 1000 : 1) : undefined, kills: Number(m.i6), headshots: Number(m.i13), hsPercent: Number(m.c4) })
     if (data.length < 100) break
     if (page === 99) throw new Error('History exceeds 10,000 matches. Please use a smaller account history.')
   }
-  const state = await sources()
-  state.faceit = { nickname: player.nickname, playerId: player.id }
-  state.matches = [...state.matches.filter(m => m.source !== 'faceit'), ...[...new Map(matches.map(m => [m.id,m])).values()]]
-  await chrome.storage.session.set({ [KEY]: state })
+  await updateSources(state => {
+    state.faceit = { nickname: player.nickname, playerId: player.id }
+    state.matches = [...state.matches.filter(m => m.source !== 'faceit'), ...[...new Map(matches.map(m => [m.id,m])).values()]]
+  })
   return { count: matches.length }
 }
 export function validSteamDemo(value: string): boolean {
   try { const u = new URL(value); return ['http:', 'https:'].includes(u.protocol) && (u.hostname === 'valve.net' || u.hostname.endsWith('.valve.net') || u.hostname.endsWith('.steamcontent.com')) && /\.dem(?:\.(?:bz2|gz|zst))?$/i.test(u.pathname) } catch { return false }
 }
-export async function discoverSteam(steamId: string, items: SourceMatch[]) {
+export async function discoverSteam(steamId: string, items: SourceMatch[], status: { checkedAt?: number; loginRequired?: boolean; error?: string } = {}) {
   if (!/^7656119\d{10}$/.test(steamId)) throw new Error('Steam profile could not be identified')
-  const state = await sources()
   const accepted = items.filter(m => m.source === 'steam' && m.url && validSteamDemo(m.url) && typeof m.id === 'string').map(m => ({ ...m, id: m.id.slice(0,100), label: String(m.label).slice(0,240) }))
-  state.steam = { steamId }
-  state.matches = [...new Map([...state.matches,...accepted].map(m => [`${m.source}:${m.id}`,m])).values()]
-  await chrome.storage.session.set({ [KEY]: state })
+  await updateSources(state => {
+    state.steam = { ...state.steam, steamId, ...status }
+    state.matches = [...new Map([...state.matches,...accepted].map(m => [`${m.source}:${m.id}`,m])).values()]
+  })
   return { count: accepted.length }
 }
 export async function sourceJob(source: string, id: string): Promise<Job> {
@@ -43,7 +52,7 @@ export async function sourceJob(source: string, id: string): Promise<Job> {
   if (!item) throw new Error('Sync the provider before importing this match')
   if (source === 'steam') {
     if (!item.url || !validSteamDemo(item.url)) throw new Error('Steam demo URL is not available')
-    return { matchId: `steam-${id}`, url: item.url, label: item.label, meta: { source: 'steam', sourceId: id, map: item.map, date: item.date } }
+    return { matchId: `steam-${id}`, url: item.url, label: item.label, meta: { source: 'steam', sourceId: id, map: item.map, date: item.date, mode: item.mode } }
   }
   const payload = await fetchPayload(id)
   const resource = demoUrlFromPayload(payload)

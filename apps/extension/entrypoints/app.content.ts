@@ -3,7 +3,7 @@ import { defineContentScript } from '#imports'
 import type { BlobReply } from '../utils/protocol'
 const EXT = 'cs2dv-extension'
 const APP = 'cs2dv-app'
-const COMMANDS = new Set(['PING','CLOUD_CONFIG','SOURCES_STATE','FACEIT_SYNC','STEAM_SYNC','IMPORT_MATCH'])
+const COMMANDS = new Set(['PING','CLOUD_CONFIG','SOURCES_STATE','FACEIT_SYNC','STEAM_SYNC','STEAM_AUTO_IMPORT','IMPORT_MATCH'])
 export default defineContentScript({
   matches: ['https://aliaskh4n.github.io/cs2d/*','http://localhost/*'],
   main() {
@@ -27,7 +27,12 @@ export default defineContentScript({
       if(event.data.kind==='ready') void deliver()
       if(event.data.kind==='connector'&&COMMANDS.has(event.data.command)&&typeof event.data.requestId==='string') {
         const {command,payload,requestId}=event.data
-        void chrome.runtime.sendMessage({target:'connector',command,payload}).then(reply=>post({requestId,...reply})).catch(error=>post({requestId,error:String(error)}))
+        try {
+          if (!chrome.runtime.id) return
+          void chrome.runtime.sendMessage({target:'connector',command,payload}).then(reply=>post({requestId,...reply})).catch(()=>{
+            if (chrome.runtime.id) post({requestId,error:'Reload this site after updating the extension, then retry the connection.'})
+          })
+        } catch { /* an old content script is invalidated after extension updates */ }
       }
     })
     let tries=0

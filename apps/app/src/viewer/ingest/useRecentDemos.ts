@@ -2,13 +2,14 @@
 import { ref } from 'vue'
 import type { Replay, ReplayComment, VoiceData } from '@/viewer/domain/schema'
 import { exportArchive, importArchive } from '@/viewer/ingest/demoArchive'
-import { analyzeMatch, type MatchAnalysis } from '@cs2/replay-core/matchAnalysis'
+import { analyzeMatch, summarizeMatch, type MatchAnalysis } from '@cs2/replay-core/matchAnalysis'
 import { cloudRequest, signedIn, uploadCloudArchive, keepCloudVoice } from '@/cloud/client'
 
 export interface RecentDemo {
   id: string; fileName: string; title?: string; fileSize: number; map: string; rounds: number
   scoreCt: number; scoreT: number; hasVoice: boolean; savedAt: number
   storage?: 'cloud' | 'session'; source?: string; sourceId?: string; analysis?: MatchAnalysis
+  date?: number; mode?: string; teamCt?: string; teamT?: string; myScore?: number; opponentScore?: number; outcome?: 'win' | 'loss' | 'draw'; competition?: string
 }
 export interface RecentDemoPayload { replay: Replay; voice: VoiceData | null }
 const list = ref<RecentDemo[]>([])
@@ -30,7 +31,7 @@ export function useRecentDemos() {
   }
   async function save(input: { fileName: string; fileSize: number; replay: Replay; voice: VoiceData | null }): Promise<string | null> {
     const analysis = analyzeMatch(input.replay)
-    const meta = { fileName: input.fileName, map: input.replay.map, rounds: analysis.rounds,
+    const meta = { ...summarizeMatch(input.replay, '76561198920126438'), fileName: input.fileName, map: input.replay.map, rounds: analysis.rounds,
       scoreCt: input.replay.finalScoreCt ?? 0, scoreT: input.replay.finalScoreT ?? 0,
       hasVoice: keepCloudVoice.value && (input.voice?.tracks?.length ?? 0) > 0, analysis }
     if (signedIn.value) {

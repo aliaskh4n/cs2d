@@ -44,7 +44,7 @@ export interface LoadedReplay {
  */
 export async function fetchReplay(ref: string): Promise<LoadedReplay> {
   const url = resolveReplayRef(ref)
-  const res = await fetch(url)
+  const res = await fetch(url, { cache: 'no-store' })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   if (/\.cs2dv(\?|$)/i.test(url)) {
     const archive = await importArchive(await res.blob())

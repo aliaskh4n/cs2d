@@ -14,7 +14,7 @@ export default defineConfig({
   manifest: {
     name: 'CS2d Cloud Companion — FACEIT & Steam',
     description: 'Import FACEIT and Steam demos, process them in memory, and save compact 2D replays in your private CS2d cloud library.',
-    permissions: ['storage', 'offscreen'],
+    permissions: ['storage', 'offscreen', 'scripting'],
     // Required hosts: the shipping/next sources. Avoids <all_urls> and its review.
     // Faceit hands out signed demo URLs served from Backblaze B2 (S3-compatible),
     // so that host must be listed too, otherwise the offscreen fetch is treated
