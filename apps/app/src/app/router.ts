@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 import { APP_HOME, UPLOAD_PATH } from '@/app/paths'
 import { hasUsedApp, isStandalone, markAppUsed } from '@/app/firstVisit'
 
@@ -24,7 +24,8 @@ const routes: RouteRecordRaw[] = [
       return true
     },
   },
-  { path: APP_HOME, redirect: UPLOAD_PATH },
+  { path: APP_HOME, redirect: '/cloud' },
+  { path: '/cloud', name: 'cloud', component: () => import('@/pages/CloudPage.vue') },
   { path: UPLOAD_PATH, name: 'demoviewer', component: Analyzer },
   {
     path: '/project',
@@ -69,7 +70,7 @@ const routes: RouteRecordRaw[] = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(import.meta.env.BASE_URL),
   routes,
 })
 

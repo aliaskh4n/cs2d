@@ -3,12 +3,18 @@ packages:
   - "packages/*"
 
 allowBuilds:
+  workerd: true
   esbuild: true
   sharp: true
   spawn-sync: false
   vue-demi: true
 
+minimumReleaseAgeExclude:
+  - miniflare@5.20261023.2-beta
+  - wrangler@4.155.0
+
 onlyBuiltDependencies:
+  - workerd
   - esbuild
   - vue-demi
   - sharp

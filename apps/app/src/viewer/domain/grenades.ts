@@ -1,3 +1,4 @@
+import { assetPath } from '@/app/assets'
 import type { GrenadeKind } from '@/viewer/domain/schema'
 
 /** Color per grenade type (data color, applied via :style). The label comes
@@ -12,11 +13,11 @@ export const KIND_COLOR: Record<GrenadeKind, string> = {
 
 /** Utility icon (white SVG under /public/weapons) per grenade type. */
 export const KIND_ICON: Record<GrenadeKind, string> = {
-  smoke: '/weapons/smoke.svg',
-  fire: '/weapons/molotov.svg',
-  he: '/weapons/he.svg',
-  flash: '/weapons/flash.svg',
-  decoy: '/weapons/decoy.svg',
+  smoke: assetPath('/weapons/smoke.svg'),
+  fire: assetPath('/weapons/molotov.svg'),
+  he: assetPath('/weapons/he.svg'),
+  flash: assetPath('/weapons/flash.svg'),
+  decoy: assetPath('/weapons/decoy.svg'),
 }
 
 /** Display order for grenade-type filters/legends. */

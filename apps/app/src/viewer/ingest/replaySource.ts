@@ -1,9 +1,10 @@
+import { assetPath } from '@/app/assets'
 /**
  * Resolves a `?replay=` reference to a URL and fetches it into a replay.
  *
  * A reference can be:
  *   - an absolute URL (`https://…`)           — used verbatim (already-shared links)
- *   - a host-absolute path (`/replays/x.json`) — used verbatim (public previews)
+ *   - a host-absolute path (assetPath(`/replays/x.json`)) — used verbatim (public previews)
  *   - a bare relative ref (`major-cologne-2026/qf1-nuke.cs2dv`)
  *       resolved against the replay base, which differs per environment:
  *         dev:  `/_replays/`  — served from the repo `replays/` dir by a Vite
@@ -25,6 +26,7 @@ export const REPLAY_BASE = import.meta.env.DEV ? '/_replays/' : RAW_BASE
 /** Turns a `?replay=` ref into an absolute (or host-absolute) URL. */
 export function resolveReplayRef(ref: string): string {
   if (/^https?:\/\//i.test(ref)) return ref // absolute URL
+  if (ref.startsWith('/replays/')) return assetPath(ref)
   if (ref.startsWith('/')) return ref // host-absolute path (public previews)
   return REPLAY_BASE + ref // relative → resolve against the replay base
 }

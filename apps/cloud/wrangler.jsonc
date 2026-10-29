@@ -1,0 +1,13 @@
+{
+  "name": "cs2d-cloud",
+  "main": "src/worker.mjs",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "vars": {
+    "APP_URL": "https://aliaskh4n.github.io/cs2d/",
+    "OWNER_STEAM_ID": "76561198920126438",
+    "MAX_STORAGE_BYTES": "536870912"
+  },
+  "durable_objects": { "bindings": [{ "name": "LIBRARY", "class_name": "CloudLibrary" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["CloudLibrary"] }]
+}

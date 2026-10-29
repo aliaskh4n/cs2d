@@ -1,3 +1,4 @@
+import { bzip2WasmUrl } from '../../scripts/vite-bzip2.mjs'
 import { defineConfig } from 'wxt'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -11,7 +12,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   modules: ['@wxt-dev/module-vue'],
   manifest: {
-    name: 'CS2d.app - Faceit demos in 2D',
+    name: 'CS2d Cloud Companion — FACEIT & Steam',
     description: 'Open any Faceit CS2 match as a 2D replay in one click. Demos are downloaded and parsed locally, 100% offline.',
     permissions: ['storage', 'offscreen'],
     // Required hosts: the shipping/next sources. Avoids <all_urls> and its review.
@@ -20,6 +21,10 @@ export default defineConfig({
     // as a plain cross-origin request and blocked by CORS.
     host_permissions: [
       '*://*.faceit.com/*',
+      'https://steamcommunity.com/*',
+      '*://*.valve.net/*',
+      'https://*.steamcontent.com/*',
+      'https://cs2d-cloud.tatokz2006.workers.dev/*',
       '*://*.faceit-cdn.net/*',
       '*://*.backblazeb2.com/*',
       '*://*.hltv.org/*',
@@ -38,6 +43,6 @@ export default defineConfig({
     ],
   },
   vite: () => ({
-    plugins: [tailwindcss()],
+    plugins: [bzip2WasmUrl(), tailwindcss()],
   }),
 })

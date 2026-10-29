@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { assetPath } from '@/app/assets'
+
 import ReplayClip from '@/viewer/player/ReplayClip.vue'
 
 /**
@@ -8,7 +10,7 @@ import ReplayClip from '@/viewer/player/ReplayClip.vue'
  * component for the landing's map-rotation semantics (`@ended`).
  */
 withDefaults(defineProps<{ src?: string; autoZoom?: boolean; loop?: boolean }>(), {
-  src: '/replays/inferno-preview.json',
+  src: assetPath('/replays/inferno-preview.json'),
   autoZoom: false,
   // When false, emit `ended` on round completion instead of restarting, letting
   // the parent rotate to a different map.

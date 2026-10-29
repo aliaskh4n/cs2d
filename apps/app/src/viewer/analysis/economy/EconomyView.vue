@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { assetPath } from '@/app/assets'
+
 import { computed, ref } from 'vue'
 import type { Replay, Side } from '@/viewer/domain/schema'
 import { buildMatchEconomy, buyStats, BUY_COLOR, type BuyType } from '@/viewer/analysis/economy/roundEconomy'
@@ -146,12 +148,12 @@ type OutcomeIcon = { mask: string } | { glyph: string } | null
 function outcomeIcon(reason: string | null): OutcomeIcon {
   switch (reason) {
     case '1':
-      return { mask: '/weapons/c4.svg' } // bomb exploded (T)
+      return { mask: assetPath('/weapons/c4.svg') } // bomb exploded (T)
     case '7':
-      return { mask: '/weapons/defuse.svg' } // bomb defused (CT)
+      return { mask: assetPath('/weapons/defuse.svg') } // bomb defused (CT)
     case '8':
     case '9':
-      return { mask: '/weapons/headshot.svg' } // elimination
+      return { mask: assetPath('/weapons/headshot.svg') } // elimination
     case '12':
       return { glyph: 'clock' } // time expired (CT)
     default:

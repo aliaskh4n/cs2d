@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { assetPath } from '@/app/assets'
+
 import { computed, defineAsyncComponent, inject, ref, watch } from 'vue'
 import { useLocalStorage } from '@vueuse/core'
 import { appFullscreenKey } from '@/shell/appFullscreen'
@@ -336,7 +338,12 @@ const { scoreboardOpen } = useViewerShortcuts({
 // Container hooks: `pause` stops playback when leaving this tab (the stage stays
 // mounted via v-show); `jumpToThrow` lets the grenades tab seek the replay; and
 // `roundIndex` exposes the focused round for the grenades "current round" filter.
-defineExpose({ pause: r.pause, jumpToThrow, roundIndex: r.roundIndex })
+function jumpToMoment(moment: { roundIndex: number; t: number; steamId: string }) {
+  jumpToThrow(moment)
+  followSteamId.value = moment.steamId
+  r.play()
+}
+defineExpose({ pause: r.pause, jumpToThrow, jumpToMoment, roundIndex: r.roundIndex })
 </script>
 
 <template>
@@ -350,7 +357,7 @@ defineExpose({ pause: r.pause, jumpToThrow, roundIndex: r.roundIndex })
           :players-by-id="r.playersById.value"
           :calibration="calibration"
           :radar-src="activeLevelRadar"
-          :mesh-src="r.replay.value?.map ? `/maps/${r.replay.value.map}.mesh.bin.gz` : undefined"
+          :mesh-src="r.replay.value?.map ? assetPath(`/maps/${r.replay.value.map}.mesh.bin.gz`) : undefined"
           :level-range="activeLevelRange"
           :round="r.round.value"
           :current-t="r.currentT.value"

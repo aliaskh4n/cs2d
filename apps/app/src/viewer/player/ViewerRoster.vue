@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { assetPath } from '@/app/assets'
+
 import { computed } from 'vue'
 import type { PlayerMeta, PlayerState, Side } from '@/viewer/domain/schema'
 import { SIDE_COLOR } from '@/viewer/domain/colors'
@@ -47,7 +49,7 @@ function roster(side: Side) {
 }
 
 const armorIcon = (p: PlayerState) =>
-  p.armor > 0 ? (p.helmet ? '/weapons/vesthelm.svg' : '/weapons/vest.svg') : null
+  p.armor > 0 ? (p.helmet ? assetPath('/weapons/vesthelm.svg') : assetPath('/weapons/vest.svg')) : null
 </script>
 
 <template>

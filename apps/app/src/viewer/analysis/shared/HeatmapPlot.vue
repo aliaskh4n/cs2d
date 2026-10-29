@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { assetPath } from '@/app/assets'
+
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { type MapCalibration, worldToFraction } from '@/viewer/domain/calibration'
 import type { Replay, Side } from '@/viewer/domain/schema'
@@ -367,7 +369,7 @@ skullSrc.onload = () => {
   skullReady = true
   render()
 }
-skullSrc.src = '/weapons/skull.svg'
+skullSrc.src = assetPath('/weapons/skull.svg')
 
 const skullCache = new Map<string, HTMLCanvasElement>()
 function skullImage(color: string): HTMLCanvasElement | null {

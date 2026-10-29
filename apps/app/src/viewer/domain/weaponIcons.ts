@@ -1,3 +1,4 @@
+import { assetPath } from '@/app/assets'
 /**
  * Maps the weapon label (emitted by the parser in `PlayerState.weapon`) to the
  * icon SVG file under /public/weapons. The (white) SVGs come from the reference
@@ -60,7 +61,7 @@ export const WEAPON_LABELS = Object.keys(FILE)
 /** Path to the icon SVG, or null if none. */
 export function weaponIconPath(label: string): string | null {
   const f = FILE[label]
-  return f ? `/weapons/${f}.svg` : null
+  return f ? assetPath(`/weapons/${f}.svg`) : null
 }
 
 /**
@@ -121,7 +122,7 @@ const KILL_KNIFE_RE = /knife|bayonet|karambit|huntsman|falchion|bowie|butterfly|
 /** Icon path for a kill's weapon, or null (e.g. "world"). */
 export function killWeaponIcon(code: string): string | null {
   if (!code) return null
-  if (KILL_KNIFE_RE.test(code)) return '/weapons/knife.svg'
+  if (KILL_KNIFE_RE.test(code)) return assetPath('/weapons/knife.svg')
   const f = KILL_FILE[code]
-  return f ? `/weapons/${f}.svg` : null
+  return f ? assetPath(`/weapons/${f}.svg`) : null
 }

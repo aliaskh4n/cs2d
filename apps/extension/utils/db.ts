@@ -1,79 +1,29 @@
-// IndexedDB store for parsed demos, in the extension origin (shared by the
-// offscreen document that writes and the background that reads metadata). The
-// heavy raw demo is discarded after parsing; only the light .cs2dv blob and its
-// metadata are kept.
+// Cloud-backed extension library. IndexedDB is deliberately not used for replay files.
 import type { ArchiveMetaRow } from './protocol'
-
-const DB_NAME = 'cs2dv-ext'
-const DB_VERSION = 1
-const META = 'meta' // matchId -> ArchiveMetaRow
-const BLOBS = 'blobs' // matchId -> Blob (.cs2dv)
-
-let dbPromise: Promise<IDBDatabase> | null = null
-
-function open(): Promise<IDBDatabase> {
-  return (dbPromise ??= new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION)
-    req.onupgradeneeded = () => {
-      const db = req.result
-      if (!db.objectStoreNames.contains(META)) db.createObjectStore(META, { keyPath: 'matchId' })
-      if (!db.objectStoreNames.contains(BLOBS)) db.createObjectStore(BLOBS)
-    }
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error)
-  }))
+import { cloudFetch, storeCloudArchive } from './cloud'
+interface CloudRow { id:string;sourceId?:string;fileName:string;map:string;scoreCt:number;scoreT:number;fileSize:number;savedAt:number;source?:string;analysis?:ArchiveMetaRow['analysis'] }
+let cached: ArchiveMetaRow[] = []
+let lastRead = 0
+export async function listArchives(): Promise<ArchiveMetaRow[]> {
+  if (Date.now()-lastRead < 5000) return cached
+  try {
+    const {matches} = await cloudFetch<{matches:CloudRow[]}>('/matches')
+    cached = matches.map(m=>({ matchId:m.sourceId||m.id, cloudId:m.id, sourceId:m.sourceId, fileName:m.fileName, label:m.fileName, map:m.map, scoreCt:m.scoreCt, scoreT:m.scoreT, sizeBytes:m.fileSize, createdAt:m.savedAt, source:m.source, analysis:m.analysis }))
+    lastRead = Date.now()
+  } catch { cached = [] }
+  return cached
 }
-
-function tx<T>(stores: string[], mode: IDBTransactionMode, fn: (t: IDBTransaction) => IDBRequest<T>): Promise<T> {
-  return open().then(
-    (db) =>
-      new Promise<T>((resolve, reject) => {
-        const t = db.transaction(stores, mode)
-        const req = fn(t)
-        req.onsuccess = () => resolve(req.result)
-        req.onerror = () => reject(req.error)
-      }),
-  )
+export async function putArchive(meta:ArchiveMetaRow,blob:Blob): Promise<void> {
+  meta.cloudId = await storeCloudArchive({fileName:meta.fileName,map:meta.map,rounds:meta.analysis?.rounds??0,scoreCt:meta.scoreCt,scoreT:meta.scoreT,analysis:meta.analysis,source:meta.source,sourceId:meta.sourceId??meta.matchId},blob)
+  lastRead = 0
 }
-
-/** Persists a parsed demo (metadata + .cs2dv blob). */
-export async function putArchive(meta: ArchiveMetaRow, blob: Blob): Promise<void> {
-  const db = await open()
-  await new Promise<void>((resolve, reject) => {
-    const t = db.transaction([META, BLOBS], 'readwrite')
-    t.objectStore(META).put(meta)
-    t.objectStore(BLOBS).put(blob, meta.matchId)
-    t.oncomplete = () => resolve()
-    t.onerror = () => reject(t.error)
-  })
+export async function totalBytes(): Promise<number> { return (await listArchives()).reduce((sum,m)=>sum+m.sizeBytes,0) }
+export async function getArchiveBlob(matchId:string): Promise<Blob|undefined> {
+  const meta = (await listArchives()).find(m=>m.matchId===matchId||m.cloudId===matchId)
+  return meta?.cloudId ? cloudFetch<Blob>(`/matches/${meta.cloudId}/archive`) : undefined
 }
-
-/** Lists stored demos (metadata only), newest first. */
-export function listArchives(): Promise<ArchiveMetaRow[]> {
-  return tx<ArchiveMetaRow[]>([META], 'readonly', (t) => t.objectStore(META).getAll() as IDBRequest<ArchiveMetaRow[]>).then(
-    (rows) => rows.sort((a, b) => b.createdAt - a.createdAt),
-  )
-}
-
-/** Total bytes used by stored .cs2dv files. */
-export async function totalBytes(): Promise<number> {
-  const rows = await listArchives()
-  return rows.reduce((sum, r) => sum + r.sizeBytes, 0)
-}
-
-/** Reads back a stored .cs2dv blob (for viewing/export). */
-export function getArchiveBlob(matchId: string): Promise<Blob | undefined> {
-  return tx<Blob | undefined>([BLOBS], 'readonly', (t) => t.objectStore(BLOBS).get(matchId) as IDBRequest<Blob | undefined>)
-}
-
-/** Removes a stored demo. */
-export async function deleteArchive(matchId: string): Promise<void> {
-  const db = await open()
-  await new Promise<void>((resolve, reject) => {
-    const t = db.transaction([META, BLOBS], 'readwrite')
-    t.objectStore(META).delete(matchId)
-    t.objectStore(BLOBS).delete(matchId)
-    t.oncomplete = () => resolve()
-    t.onerror = () => reject(t.error)
-  })
+export async function deleteArchive(matchId:string): Promise<void> {
+  const meta = (await listArchives()).find(m=>m.matchId===matchId||m.cloudId===matchId)
+  if (meta?.cloudId) await cloudFetch(`/matches/${meta.cloudId}`,{method:'DELETE'})
+  lastRead = 0
 }

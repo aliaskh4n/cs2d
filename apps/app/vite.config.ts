@@ -1,3 +1,4 @@
+import { bzip2WasmUrl } from '../../scripts/vite-bzip2.mjs'
 import { createReadStream, existsSync, statSync } from 'node:fs'
 import { join, normalize, sep } from 'node:path'
 import { fileURLToPath, URL } from 'node:url'
@@ -32,7 +33,10 @@ function serveRepoReplays(): Plugin {
 
 // App isolado do analisador de demo 2D (CS2 Demo Viewer), com porta própria.
 export default defineConfig({
+  base: process.env.VITE_BASE_PATH || "/cs2d/",
+  worker: { plugins: () => [bzip2WasmUrl()] },
   plugins: [
+    bzip2WasmUrl(),
     serveRepoReplays(),
     vue(),
     tailwindcss(),
@@ -47,7 +51,7 @@ export default defineConfig({
         theme_color: '#0a0c12',
         background_color: '#0a0c12',
         display: 'standalone',
-        start_url: '/app',
+        start_url: './#/cloud',
         icons: [
           { src: 'pwa-64x64.png', sizes: '64x64', type: 'image/png' },
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
@@ -63,9 +67,10 @@ export default defineConfig({
       workbox: {
         // Precache everything (app shell, wasm, maps, weapons, preview replays)
         // so the app works fully offline after the first visit.
-        globPatterns: ['**/*.{js,css,html,svg,png,webp,jpg,ico,json,wasm}'],
+        globPatterns: ['**/*.{js,css,html,svg,wasm}'],
         // Largest asset is a ~1.2MB preview replay; bump the cap to fit it.
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        globIgnores: ['**/replays/**', '**/cs2d-companion.zip'],
         // The app is an SPA: serve index.html for navigations while offline.
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,

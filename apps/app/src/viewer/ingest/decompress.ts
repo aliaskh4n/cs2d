@@ -1,3 +1,4 @@
+import { assetPath } from '@/app/assets'
 /**
  * Detects the container/compression of an uploaded demo by its magic bytes and
  * returns the raw `.dem` bytes ready for the WASM parser. Runs in the Web Worker
@@ -12,10 +13,10 @@
  * `fzstd`, which has a Huffman-table decoding bug that rejects some perfectly
  * valid demos (e.g. large GOTV `.dem.zst`) with "invalid zstd data".
  *
- * bzip2 (`.dem.bz2`) is intentionally not supported yet (no native API and a
- * heavier dependency); it fails with a clear, actionable message.
+ * bzip2 (`.dem.bz2`) uses the bundled reference bzip2 decoder for Steam GOTV.
  */
 import { unzipSync } from 'fflate'
+import { decompressBzip2 } from '@cs2/replay-core/decompressBzip2'
 import { init as zstdInitRaw, decompress as zstdDecompress } from '@bokuweb/zstd-wasm'
 
 // The bundled types resolve to the Node build's `init()` (no args), but the web
@@ -23,7 +24,7 @@ import { init as zstdInitRaw, decompress as zstdDecompress } from '@bokuweb/zstd
 const zstdInit = zstdInitRaw as (path?: string) => Promise<void>
 
 // Stable URL for the libzstd wasm, served from `public/` (see ensureZstd).
-const ZSTD_WASM_URL = '/zstd.wasm'
+const ZSTD_WASM_URL = assetPath('/zstd.wasm')
 
 /** Whether `bytes` starts with the given byte signature. */
 function startsWith(bytes: Uint8Array, sig: number[]): boolean {
@@ -52,7 +53,7 @@ export function isCompressed(bytes: Uint8Array): boolean {
 /** Loads the libzstd WASM module once; reused across uploads. */
 let zstdReady: Promise<void> | undefined
 function ensureZstd(): Promise<void> {
-  // Load the wasm from a stable public URL (`/zstd.wasm`, kept in sync by
+  // Load the wasm from a stable public URL (assetPath(`/zstd.wasm`), kept in sync by
   // `scripts/sync-zstd-wasm.mjs`). The package's default `new URL('./zstd.wasm',
   // import.meta.url)` is mis-resolved by Vite's dev server inside a Web Worker
   // (it serves index.html, so the wasm fails to compile).
@@ -91,7 +92,7 @@ export async function toRawDemo(input: Uint8Array): Promise<Uint8Array> {
   if (startsWith(input, ZSTD)) return unzstd(input)
   if (startsWith(input, ZIP)) return pickDemFromZip(input)
   if (startsWith(input, BZIP2)) {
-    throw new Error('Demos .bz2 ainda não são suportadas. Descomprima para .dem antes de enviar.')
+    return decompressBzip2(input, assetPath('/bz2.wasm'))
   }
   // Anything else is assumed to be a raw demo (PBDEMS2 / HL2DEMO).
   return input

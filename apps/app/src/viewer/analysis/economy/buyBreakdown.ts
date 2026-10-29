@@ -1,3 +1,4 @@
+import { assetPath } from '@/app/assets'
 /**
  * Per-round buy breakdown: each player's full loadout at the end of the buy phase,
  * priced so the total equals the equipment value the overview shows, with what was
@@ -31,9 +32,9 @@ export const KIT_LABEL = 'Defuse Kit'
 
 /** Icons for the derived equipment (gun/grenade icons come from `weaponIconPath`). */
 const EQUIP_ICON: Record<string, string> = {
-  [ARMOR_LABEL]: '/weapons/vest.svg',
-  [ARMOR_HELMET_LABEL]: '/weapons/vesthelm.svg',
-  [KIT_LABEL]: '/weapons/defuse.svg',
+  [ARMOR_LABEL]: assetPath('/weapons/vest.svg'),
+  [ARMOR_HELMET_LABEL]: assetPath('/weapons/vesthelm.svg'),
+  [KIT_LABEL]: assetPath('/weapons/defuse.svg'),
 }
 
 /** CS2 buy-menu prices, keyed by the parser's item label vocabulary. Molotov is

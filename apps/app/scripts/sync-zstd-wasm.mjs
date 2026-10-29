@@ -21,3 +21,7 @@ const dest = resolve(appRoot, 'public', 'zstd.wasm')
 mkdirSync(dirname(dest), { recursive: true })
 copyFileSync(src, dest)
 console.log(`[sync-zstd-wasm] ${src} -> ${dest}`)
+
+// Steam GOTV bzip2 decoder, loaded by its explicit public URL.
+const bz2Source = fileURLToPath(import.meta.resolve("@foxglove/wasm-bz2/wasm/module.wasm"))
+copyFileSync(bz2Source, resolve(dirname(dest), "bz2.wasm"))

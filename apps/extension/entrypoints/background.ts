@@ -1,4 +1,7 @@
 import { defineBackground } from '#imports'
+import { configureCloud } from '../utils/cloud'
+import { sources, syncFaceit, discoverSteam, sourceJob } from '../utils/connectors'
+import { analyzeMatch } from '@cs2/replay-core/matchAnalysis'
 import {
   type ActiveJob,
   type ArchiveMetaRow,
@@ -13,7 +16,7 @@ import { importArchive } from '@cs2/replay-core/demoArchive'
 import { exportLogs, makeLog } from '../utils/log'
 
 // Where stored replays open for playback (the public 2D viewer).
-const WEB_APP = 'https://cs2d.app'
+const WEB_APP = import.meta.env.VITE_WEB_APP || 'https://aliaskh4n.github.io/cs2d/'
 
 const log = makeLog('background')
 // Grab the full log from the service-worker console with `await cs2dvLogs()`.
@@ -26,6 +29,36 @@ const log = makeLog('background')
 const OFFSCREEN = 'offscreen.html'
 
 export default defineBackground(() => {
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (msg?.target !== 'connector') return false
+    const trustedApp = sender.url?.startsWith(WEB_APP) || sender.url?.startsWith('http://localhost:')
+    const trustedSteam = sender.url?.startsWith('https://steamcommunity.com/')
+    if (msg.command === 'STEAM_DISCOVER' ? !trustedSteam : !trustedApp) { sendResponse({error:'Untrusted connector origin'}); return false }
+    const respond = async () => {
+      const payload = msg.payload ?? {}
+      switch (msg.command) {
+        case 'PING': return { version: chrome.runtime.getManifest().version }
+        case 'CLOUD_CONFIG': await configureCloud(payload); return {ok:true}
+        case 'SOURCES_STATE': return { ...await sources(), active: [...active.values()] }
+        case 'FACEIT_SYNC': return syncFaceit(payload.nickname)
+        case 'STEAM_SYNC':
+          for (const tab of ['matchhistorypremier','matchhistorycompetitive','matchhistorywingman']) await chrome.tabs.create({url:`https://steamcommunity.com/my/gcpd/730/?tab=${tab}`})
+          return {ok:true}
+        case 'STEAM_DISCOVER': return discoverSteam(payload.steamId,payload.matches)
+        case 'IMPORT_MATCH': {
+          // Resolve signed URLs when the job actually starts; they can expire while queued.
+          const item = (await sources()).matches.find(m => m.id === payload.id && m.source === payload.source)
+          if (!item) throw new Error('Match not found')
+          const matchId = item.source === 'steam' ? `steam-${item.id}` : item.id
+          enqueue({ matchId, url: '', label: item.label, meta: {source:item.source,sourceId:item.id,map:item.map,date:item.date} })
+          return {ok:true}
+        }
+        default: throw new Error('Unknown connector request')
+      }
+    }
+    void respond().then(result=>sendResponse({result})).catch(error=>sendResponse({error:error instanceof Error?error.message:String(error)}))
+    return true
+  })
   // In-flight jobs by matchId (what the overlay shows as "active").
   const active = new Map<string, ActiveJob>()
   const queue: Job[] = []
@@ -55,7 +88,7 @@ export default defineBackground(() => {
         }
         case 'OPEN_VIEWER':
           // The app reads `#cs2dv=<id>` and asks us back for the bytes (GET_BLOB).
-          void chrome.tabs.create({ url: `${WEB_APP}/?fromExtension=1#cs2dv=${msg.matchId}` })
+          void openCloudViewer(msg.matchId)
           return false
         case 'GET_BLOB':
           void getBlobReply(msg.matchId).then(sendResponse)
@@ -113,10 +146,14 @@ export default defineBackground(() => {
   async function pump() {
     if (running) return
     const job = queue.shift()
-    if (!job) return
+    if (!job) {
+      setTimeout(() => { if (!running && !queue.length) void chrome.offscreen.closeDocument().catch(() => {}) }, 1000)
+      return
+    }
     running = true
     log.info('processing', { matchId: job.matchId })
     try {
+      if (!job.url && job.meta?.source && job.meta.sourceId) Object.assign(job, await sourceJob(job.meta.source,job.meta.sourceId))
       await ensureOffscreen()
       await browser_sendMessage({ target: 'offscreen', type: 'PROCESS', job })
     } catch (err) {
@@ -173,6 +210,7 @@ async function importBlob(fileName: string, base64: string): Promise<{ ok: boole
       teamA: replay.finalCtName || undefined,
       teamB: replay.finalTName || undefined,
       source: 'imported',
+      analysis: analyzeMatch(replay),
     }
     await putArchive(meta, blob)
     return { ok: true }
@@ -203,3 +241,11 @@ function browser_sendMessage(msg: unknown): Promise<unknown> {
 }
 
 export type { ArchiveMetaRow }
+
+async function openCloudViewer(matchId: string) {
+  const match = (await listArchives()).find(m => m.matchId === matchId || m.cloudId === matchId)
+  if (!match?.cloudId) return
+  const tabs = await chrome.tabs.query({url: WEB_APP + '*'})
+  if (tabs[0]?.id) await chrome.tabs.update(tabs[0].id, {url: `${WEB_APP}#/app/${match.cloudId}/overview`,active:true})
+  else await chrome.tabs.create({url: `${WEB_APP}#/cloud`})
+}

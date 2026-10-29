@@ -1,3 +1,4 @@
+import { assetPath } from '@/app/assets'
 // Small presentation helpers for demo metadata (map name, thumbnail, size, date)
 // shared by the upload home, the Major bracket and the Library page so the
 // formatting stays consistent in one place.
@@ -24,7 +25,7 @@ export function prettyMap(map: string): string {
 // Map image: the preview art when it exists; otherwise the radar used in the
 // viewer; otherwise null (callers fall back to a generic icon).
 export function mapImage(map: string): string | null {
-  if (MAP_THUMBS.has(map)) return `/maps/thumbs/${map}.webp`
+  if (MAP_THUMBS.has(map)) return assetPath(`/maps/thumbs/${map}.webp`)
   return MAP_CALIBRATION[map]?.radar ?? null
 }
 

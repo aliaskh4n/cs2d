@@ -3,8 +3,8 @@ import { useRoute } from 'vue-router'
 import { useI18n } from '@/app/i18n'
 
 // Canonical production origin; used for <link rel=canonical> and og:url.
-const SITE_URL = 'https://cs2d.app'
-const BRAND = 'CS2d.app'
+const SITE_URL = 'https://aliaskh4n.github.io/cs2d/#'
+const BRAND = 'CS2d Cloud'
 
 // Per-route head data keyed by route name. `titleKey` is an i18n key shown
 // before the brand; omit it for inner viewer routes (brand only). The home page
@@ -13,6 +13,7 @@ const BRAND = 'CS2d.app'
 // description. Keys resolve through i18n so the head follows the active locale,
 // reusing the page strings we already translate.
 const ROUTE_SEO: Record<string, { titleKey?: string; descKey: string }> = {
+  cloud: { titleKey: 'cloud.title', descKey: 'cloud.subtitle' },
   landing: { descKey: 'seo.appDescription' },
   demoviewer: { descKey: 'seo.appDescription' },
   demo: { descKey: 'seo.appDescription' },

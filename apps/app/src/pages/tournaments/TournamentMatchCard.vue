@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { assetPath } from '@/app/assets'
+
 import { computed, ref } from 'vue'
 import { onClickOutside } from '@vueuse/core'
 import UiIcon from '@/ui/UiIcon.vue'
@@ -150,7 +152,7 @@ function play(map: TournamentMapReplay) {
             @click="play(m)"
           >
             <img
-              :src="`/maps/${m.map}_radar.png`"
+              :src="assetPath(`/maps/${m.map}_radar.png`)"
               :alt="prettyMap(m.map)"
               class="absolute inset-0 h-full w-full object-cover"
               :class="m.replay ? '' : 'opacity-30 grayscale'"

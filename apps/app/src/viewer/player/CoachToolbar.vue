@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { assetPath } from '@/app/assets'
+
 import { ref } from 'vue'
 import { onClickOutside } from '@vueuse/core'
 import UiIcon from '@/ui/UiIcon.vue'
@@ -116,7 +118,7 @@ function pickThickness(w: number) {
         "
         @click="onGrenadeButton"
       >
-        <img :src="`/weapons/${GRENADE_ICON[props.grenadeKind]}.svg`" :alt="t(`grenadeKind.${props.grenadeKind}`)" class="h-5 w-5 object-contain" />
+        <img :src="assetPath(`/weapons/${GRENADE_ICON[props.grenadeKind]}.svg`)" :alt="t(`grenadeKind.${props.grenadeKind}`)" class="h-5 w-5 object-contain" />
       </button>
       <div
         v-if="grenadeOpen"
@@ -131,7 +133,7 @@ function pickThickness(w: number) {
           :class="k === props.grenadeKind ? 'bg-white/15' : 'hover:bg-white/10'"
           @click="pickGrenade(k)"
         >
-          <img :src="`/weapons/${GRENADE_ICON[k]}.svg`" :alt="t(`grenadeKind.${k}`)" class="h-5 w-5 object-contain" />
+          <img :src="assetPath(`/weapons/${GRENADE_ICON[k]}.svg`)" :alt="t(`grenadeKind.${k}`)" class="h-5 w-5 object-contain" />
         </button>
       </div>
     </div>

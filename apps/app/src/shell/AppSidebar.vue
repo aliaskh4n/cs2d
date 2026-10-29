@@ -23,6 +23,7 @@ const iconOnly = computed(() => isDesktop.value && collapsed.value)
 // Top: the core tool navigation. The analyzer route ('demoviewer') backs both the
 // upload home and the open viewer; the tournaments showcase sits alongside them.
 const NAV_TOP = [
+  { name: 'cloud', to: '/cloud', icon: 'library', label: 'cloud.nav' },
   { name: 'demoviewer', to: UPLOAD_PATH, icon: 'upload', label: 'shell.upload' },
   { name: 'library', to: '/library', icon: 'library', label: 'shell.library' },
   { name: 'tournaments', to: '/tournaments', icon: 'trophy', label: 'shell.tournaments' },
@@ -64,7 +65,7 @@ function itemClass(name: string) {
       :class="iconOnly ? 'justify-center' : ''"
     >
       <Cs2Mark size="sm" />
-      <span v-if="!iconOnly" class="truncate text-sm font-medium">CS2d.app</span>
+      <span v-if="!iconOnly" class="truncate text-sm font-medium">CS2d Cloud</span>
     </RouterLink>
 
     <TooltipProvider>

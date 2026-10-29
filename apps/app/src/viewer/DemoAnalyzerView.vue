@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { assetPath } from '@/app/assets'
+
 import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMediaQuery } from '@vueuse/core'
@@ -13,6 +15,7 @@ const HeatmapView = defineAsyncComponent(() => import('@/viewer/analysis/heatmap
 const UtilitiesView = defineAsyncComponent(() => import('@/viewer/analysis/utility/UtilitiesView.vue'))
 const EconomyView = defineAsyncComponent(() => import('@/viewer/analysis/economy/EconomyView.vue'))
 const DuelsView = defineAsyncComponent(() => import('@/viewer/analysis/duels/DuelsView.vue'))
+const MatchOverview = defineAsyncComponent(() => import('@/viewer/analysis/overview/MatchOverview.vue'))
 const DemoPreviewLoop = defineAsyncComponent(() => import('@/viewer/player/DemoPreviewLoop.vue'))
 import { useDemoParser } from '@/viewer/ingest/useDemoParser'
 import { useRecentDemos } from '@/viewer/ingest/useRecentDemos'
@@ -75,7 +78,7 @@ const autoplay = computed(() => {
   if (q === undefined) return true
   return q === '1' || q === 'true'
 })
-type Tab = 'viewer' | 'heatmap' | 'utilities' | 'economy' | 'duels'
+type Tab = 'overview' | 'moments' | 'viewer' | 'heatmap' | 'utilities' | 'economy' | 'duels'
 // The active tab is driven by the URL: `/app/:id` is the 2D stage, `/app/:id/heatmaps`
 // the heatmap, `/:id/utilities` the utilities page, `/:id/economy` the economy
 // page, `/:id/duels` the duels page.
@@ -84,6 +87,7 @@ const activeTab = computed<Tab>(() => {
   // (?replay=) have no id, so the tab rides along as ?tab=.
   const raw = route.params.tab || route.query.tab
   const tab = Array.isArray(raw) ? raw[0] : raw
+  if (tab === 'overview' || tab === 'moments') return tab
   if (tab === 'heatmaps') return 'heatmap'
   // `grenades` kept as a backward-compatible alias for older links.
   if (tab === 'utilities' || tab === 'grenades') return 'utilities'
@@ -92,6 +96,8 @@ const activeTab = computed<Tab>(() => {
   return 'viewer'
 })
 const TAB_SEGMENT: Record<Tab, string> = {
+  overview: '/overview',
+  moments: '/moments',
   viewer: '',
   heatmap: '/heatmaps',
   utilities: '/utilities',
@@ -100,6 +106,8 @@ const TAB_SEGMENT: Record<Tab, string> = {
 }
 // Tab name used in the ?tab= query for external replays ('viewer' = no param).
 const TAB_QUERY: Record<Tab, string | undefined> = {
+  overview: 'overview',
+  moments: 'moments',
   viewer: undefined,
   heatmap: 'heatmaps',
   utilities: 'utilities',
@@ -218,9 +226,9 @@ watch(
 // next once each round finishes playing (see DemoPreviewLoop `@ended`). The
 // starting map is randomized so refreshes don't always open on the same one.
 const PREVIEWS = [
-  '/replays/inferno-preview.json',
-  '/replays/dust2-preview.json',
-  '/replays/anubis-preview.json',
+  assetPath('/replays/inferno-preview.json'),
+  assetPath('/replays/dust2-preview.json'),
+  assetPath('/replays/anubis-preview.json'),
 ]
 const previewIndex = ref(Math.floor(Math.random() * PREVIEWS.length))
 const currentPreview = computed(() => PREVIEWS[previewIndex.value])
@@ -249,6 +257,11 @@ function onGrenadeJump(payload: { roundIndex: number; t: number }) {
   goTab('viewer')
 }
 
+function onMomentJump(moment: { roundIndex: number; t: number; steamId: string }) {
+  stage.value?.jumpToMoment(moment)
+  goTab('viewer')
+}
+
 function pick() {
   input.value?.click()
 }
@@ -272,7 +285,7 @@ async function handleFile(file: File) {
   }
   // Accept a raw .dem or a supported archive (.gz / .zip / .zst); the worker
   // detects the actual format by magic bytes and decompresses if needed.
-  if (!/\.(dem|gz|zip|zst)$/i.test(file.name)) {
+  if (!/\.(dem|gz|zip|zst|bz2)$/i.test(file.name)) {
     parser.reset()
     return
   }
@@ -284,10 +297,10 @@ async function handleFile(file: File) {
       fileSize: parser.fileSize.value,
       replay: parser.replay.value,
       voice: parser.voice.value,
-    })
+    }).catch(error => { importError.value = error instanceof Error ? error.message : String(error); return null })
     if (id) {
       currentId.value = id // already loaded: keeps the watcher from reloading
-      router.push(demoPath(id))
+      router.push(`${demoPath(id)}/overview`)
     }
   }
 }
@@ -315,7 +328,7 @@ async function onImportArchive(file: File) {
       fileSize: file.size,
     })
     currentId.value = id
-    router.push(demoPath(id))
+    router.push(`${demoPath(id)}/overview`)
   } catch (err) {
     importError.value = err instanceof Error ? err.message : String(err)
   } finally {
@@ -454,6 +467,7 @@ function onImportInput(e: Event) {
 
 <template>
   <div class="relative h-full w-full bg-ink-950">
+    <div v-if="importError" role="alert" class="absolute bottom-4 left-4 right-4 z-50 rounded-lg border border-loss/50 bg-ink-900 p-3 text-sm text-loss">{{ importError }} <button type="button" class="float-right" @click="importError = null">×</button></div>
     <!-- Content when the replay is ready: 2D stage or heatmap, per tab -->
     <template v-if="parser.status.value === 'done' && parser.replay.value">
       <!-- v-show keeps the stage mounted (preserves playback position across tab switches) -->
@@ -470,6 +484,7 @@ function onImportInput(e: Event) {
           :active="activeTab === 'viewer'"
         />
       </div>
+      <MatchOverview v-if="activeTab === 'overview' || activeTab === 'moments'" :replay="parser.replay.value" :mode="activeTab" @jump="onMomentJump" />
       <HeatmapView
         v-if="activeTab === 'heatmap'"
         :replay="parser.replay.value"
@@ -496,7 +511,8 @@ function onImportInput(e: Event) {
 
       <!-- Tabs (2D / Duels / Heatmaps / Utilities / Economy) in the center of the appbar -->
       <Teleport to="#publicbar-center">
-        <div class="flex items-center gap-0.5 rounded-lg border border-ink-700 bg-ink-900/60 p-0.5">
+        <div class="flex max-w-[72vw] items-center gap-0.5 overflow-x-auto rounded-lg border border-ink-700 bg-ink-900/60 p-0.5">
+          <button v-for="tab in (['overview','moments'] as const)" :key="tab" type="button" class="shrink-0 cursor-pointer whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium" :class="activeTab === tab ? 'bg-ink-700 text-ink-50' : 'text-ink-300 hover:text-ink-100'" @click="goTab(tab)">{{ t(`matchroom.${tab}`) }}</button>
           <button
             type="button"
             class="shrink-0 cursor-pointer whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium transition-colors"
@@ -689,7 +705,7 @@ function onImportInput(e: Event) {
             <input
               ref="input"
               type="file"
-              accept=".dem,.gz,.zip,.zst,.cs2dv"
+              accept=".dem,.gz,.zip,.zst,.bz2,.cs2dv"
               class="hidden"
               @change="onInput"
               @click.stop

@@ -13,6 +13,7 @@ export type Phase = 'queued' | 'downloading' | 'decompressing' | 'parsing' | 'bu
 /** Rich match info scraped from Faceit's API, shown on the card before/while the
  *  demo is parsed (the parser later fills in the authoritative map/score). */
 export interface MatchMeta {
+  sourceId?: string
   teamA?: string
   teamB?: string
   scoreA?: number
@@ -55,6 +56,9 @@ export interface ActiveJob {
 
 /** Metadata for a stored .cs2dv (no blob; that's read on demand). */
 export interface ArchiveMetaRow {
+  cloudId?: string
+  sourceId?: string
+  analysis?: import("@cs2/replay-core/matchAnalysis").MatchAnalysis
   matchId: string
   fileName: string
   label: string
@@ -118,7 +122,7 @@ export function fileNameFromUrl(url: string): string {
   try {
     const last = new URL(url).pathname.split('/').pop() || ''
     const name = decodeURIComponent(last)
-    if (/\.(dem|gz|zip|zst)$/i.test(name)) return name
+    if (/\.(dem|gz|zip|zst|bz2)$/i.test(name)) return name
   } catch {
     /* fall through */
   }

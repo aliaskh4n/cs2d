@@ -1,3 +1,14 @@
+# CS2d Cloud — personal match library
+
+Cloud fork for FACEIT and Steam imports, match reports, weapon statistics and
+highlights. Personal replays are stored remotely; persistent local demo storage
+is disabled. Setup, architecture, provider limitations and checks: [CLOUD.md](CLOUD.md).
+
+Upstream project and credits: [zenojunior/cs2d](https://github.com/zenojunior/cs2d).
+The original project description below documents the upstream client-side viewer.
+
+---
+
 # CS2d.app
 
 The fastest free browser-based 2D replay analyzer for **Counter-Strike 2**

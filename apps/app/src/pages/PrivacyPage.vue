@@ -7,10 +7,10 @@ import { useI18n } from '@/app/i18n'
 // is translatable; the contact email is data rendered as a link.
 const { t, locale } = useI18n()
 
-const CONTACT_EMAIL = 'contact@cs2d.app'
+const PROJECT_URL = 'https://github.com/aliaskh4n/cs2d'
 
 // Date the policy was last reviewed; formatted per the active locale.
-const LAST_UPDATED = '2026-06-21'
+const LAST_UPDATED = '2026-10-29'
 const lastUpdated = computed(() =>
   new Date(`${LAST_UPDATED}T00:00:00`).toLocaleDateString(locale.value, {
     year: 'numeric',
@@ -53,9 +53,9 @@ const SECTIONS = ['local', 'storage', 'analytics', 'thirdParty'] as const
         <p class="mt-3 text-sm leading-relaxed text-ink-300">
           {{ contactParts.before
           }}<a
-            :href="`mailto:${CONTACT_EMAIL}`"
+            :href="PROJECT_URL"
             class="font-medium text-ink-100 underline decoration-ink-600 underline-offset-2 transition-colors hover:text-ink-50 hover:decoration-ink-400"
-            >{{ CONTACT_EMAIL }}</a
+            >GitHub</a
           >{{ contactParts.after }}
         </p>
       </section>

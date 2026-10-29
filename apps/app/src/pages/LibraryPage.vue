@@ -32,6 +32,7 @@ import { useI18n } from '@/app/i18n'
 const { t } = useI18n()
 const router = useRouter()
 const recent = useRecentDemos()
+onMounted(() => { void recent.refresh().catch(console.error) })
 const loadingId = ref<string | null>(null)
 
 // Per-map filter ('all' = no filter). Distinct maps drive the filter chips.

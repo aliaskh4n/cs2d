@@ -7,6 +7,7 @@
 // it ourselves from the match payload (signDemoUrl). Both run in the page/content
 // origin, so the same-origin Faceit API calls carry the user's auth cookies.
 import type { MatchMeta, StateReply } from './protocol'
+import { faceitJson } from './faceitApi'
 
 /** The match id from a `/room/<id>` URL, or null when not in a room. */
 export function matchIdFromUrl(): string | null {
@@ -22,20 +23,13 @@ export function roomUrlFromLocation(): string {
 
 /** Faceit internal API: the raw match payload (meta + demo URLs). */
 export async function fetchPayload(matchId: string): Promise<Record<string, any>> {
-  const match = await fetch(`https://www.faceit.com/api/match/v2/match/${matchId}`, {
-    credentials: 'include',
-  }).then((r) => r.json())
+  const match = await faceitJson(`/api/match/v2/match/${matchId}`)
   return match?.payload ?? {}
 }
 
 /** Exchange a stored demo URL for a short-lived signed CDN download URL. */
 export async function signDemoUrl(demoUrl: string): Promise<string | null> {
-  const signed = await fetch('https://www.faceit.com/api/download/v2/demos/download-url', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ resource_url: demoUrl }),
-  }).then((r) => r.json())
+  const signed = await faceitJson('/api/download/v2/demos/download-url', {resource_url: demoUrl})
   return signed?.payload?.download_url ?? null
 }
 

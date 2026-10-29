@@ -10,6 +10,7 @@ import ParserWorker from '../../lib/demoParser.worker?worker'
 import type { ParseResponse } from '../../lib/demoParser.worker'
 import wasmUrl from '../../lib/parser/demo_parser_bg.wasm?url'
 import { exportArchive } from '@cs2/replay-core/demoArchive'
+import { decompressBzip2 } from '@cs2/replay-core/decompressBzip2'
 import type { Replay, VoiceData } from '@cs2/replay-core/schema'
 
 // The bundled types resolve to the Node build's `init()` (no args); the web
@@ -22,6 +23,8 @@ function ensureZstd(): Promise<void> {
 }
 import { fileNameFromUrl, type ArchiveMetaRow, type Job, type ToOffscreen } from '../../utils/protocol'
 import { putArchive } from '../../utils/db'
+import { cloudConfig } from '../../utils/cloud'
+import { analyzeMatch } from '@cs2/replay-core/matchAnalysis'
 import { exportLogs, makeLog } from '../../utils/log'
 
 const log = makeLog('offscreen')
@@ -73,6 +76,7 @@ async function process(job: Job) {
   }
   const host = hostOf(url)
   try {
+    const config = await cloudConfig()
     // --- download (streamed, with progress) ---
     log.info('download start', { matchId, host })
     report({ type: 'JOB_PROGRESS', matchId, patch: { phase: 'downloading', loaded: 0, total: 0 } })
@@ -113,12 +117,14 @@ async function process(job: Job) {
       }
     }
     ensureLive()
-    const compressed = concat(parts, loaded)
+    let compressed = concat(parts, loaded)
+    parts.length = 0
     log.info('downloaded', { matchId, bytes: loaded })
 
     // --- decompress to raw .dem ---
     report({ type: 'JOB_PROGRESS', matchId, patch: { phase: 'decompressing' } })
     const raw = await toRawDemo(compressed)
+    compressed = new Uint8Array(0)
     log.info('decompressed', { matchId, rawBytes: raw.byteLength })
 
     // --- parse (in the reused app worker) ---
@@ -131,10 +137,12 @@ async function process(job: Job) {
     // --- pack to .cs2dv and store (discard raw) ---
     ensureLive()
     report({ type: 'JOB_PROGRESS', matchId, patch: { phase: 'storing' } })
-    const fileName = fileNameFromUrl(url).replace(/\.(gz|zst|zip)$/i, '')
-    const blob = await exportArchive({ fileName, replay, voice, comments: [] })
+    const fileName = fileNameFromUrl(url).replace(/\.(gz|zst|zip|bz2)$/i, '')
+    const blob = await exportArchive({ fileName, replay, voice: config.keepVoice ? voice : null, comments: [] })
     const meta: ArchiveMetaRow = {
       matchId,
+      sourceId: job.meta?.sourceId ?? matchId,
+      analysis: analyzeMatch(replay),
       fileName,
       label: job.label,
       // Authoritative map/score from the parsed replay; team/competition from
@@ -195,6 +203,7 @@ async function toRawDemo(input: Uint8Array): Promise<Uint8Array> {
     await ensureZstd()
     return zstdDecompress(input)
   }
+  if (input[0] === 0x42 && input[1] === 0x5a && input[2] === 0x68) return decompressBzip2(input, chrome.runtime.getURL('bz2.wasm' as never))
   return input // assume raw PBDEMS2
 }
 
