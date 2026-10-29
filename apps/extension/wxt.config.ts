@@ -31,7 +31,7 @@ export default defineConfig({
       '*://*.gamersclub.com.br/*',
     ],
     // Later sources, granted at runtime via chrome.permissions.request.
-    optional_host_permissions: ['*://*.valve.net/*', '*://*.5eplay.com/*', '*://*.renown.gg/*'],
+    optional_host_permissions: ['*://*.5eplay.com/*', '*://*.renown.gg/*'],
     // The offscreen document runs the WASM parser; allow wasm in extension pages.
     content_security_policy: {
       extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
